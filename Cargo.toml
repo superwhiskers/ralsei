@@ -1,0 +1,26 @@
+[package]
+name = "ralsei"
+description = "the fluffiest nintendo network library to exist!"
+version = "0.1.0"
+authors = ["superwhiskers <whiskerdev@protonmail.com>"]
+edition = "2018"
+license = "MPL-2.0"
+
+[dependencies]
+thiserror = "^1.0"
+vulkano = "^0.18"
+serde = "^1.0"
+quick-xml = "^0.18"
+byteorder = "^1.0"
+tokio = { version = "^0.2", features = ["full"] }
+num-derive = "^0.3"
+num-traits = "^0.2"
+ring = "^0.16"
+hyper = "^0.13"
+hyper-rustls = "^0.20"
+isolanguage-1 = "^0.1"
+isocountry = "^0.2"
+http = "^0.2"
+ux = "^0.1"
+strum = "^0.18"
+strum_macros = "^0.18"
