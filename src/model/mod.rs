@@ -8,6 +8,5 @@
 //
 
 pub mod console;
-pub mod protocol;
 pub mod title;
 pub mod server;

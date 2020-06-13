@@ -15,8 +15,8 @@ use strum_macros::{Display, EnumString};
 
 use crate::model::{
     console::common::{Console, Environment, Region, HeaderConstructionError, Type},
-    server::Kind as ServerKind,
-    title::{title_id::TitleId, title_version::TitleVersion},
+    server::ServerKind,
+    title::{id::TitleId, version::TitleVersion},
 };
 
 /// the model of the console. data for a 3ds-only header

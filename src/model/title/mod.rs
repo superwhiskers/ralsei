@@ -7,5 +7,5 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
-pub mod title_id;
-pub mod title_version;
+pub mod id;
+pub mod version;

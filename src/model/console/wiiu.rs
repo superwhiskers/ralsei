@@ -12,8 +12,8 @@ use std::borrow::Cow;
 
 use crate::model::{
     console::common::{Console, Environment, Region, HeaderConstructionError, Type},
-    server::Kind as ServerKind,
-    title::title_id::TitleId,
+    server::ServerKind,
+    title::id::TitleId,
 };
 
 /// information required to emulate a wii u

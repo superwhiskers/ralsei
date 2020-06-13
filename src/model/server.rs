@@ -18,7 +18,7 @@ pub const DEFAULT_MII_CDN_HOST: &str = "mii-secure.account.nintendo.net";
 /// the address provided should be the *host* of the server;
 /// it should not be a url to the api endpoint.
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-pub enum Kind<'a> {
+pub enum ServerKind<'a> {
     Account(Cow<'a, str>),
     Mii(Cow<'a, str>),
 }

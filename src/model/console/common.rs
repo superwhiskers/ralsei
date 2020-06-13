@@ -7,22 +7,42 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
+//! A collection of type definitions for data shared between consoles
+//!
+//! The type included here that you will be interacting with most will be the [`Console`] trait,
+//! which abstracts over console data to allow you to use it without being aware of which console
+//! it is.
+//!
+//! Aside from that, there are a number of other shared type definitions used in forming a
+//! console's data that are defined here, such as the [`Region`] enumeration.
+//!
+//! [`Console`]: ./trait.Console.html
+//! [`Region`]: ./enum.Region.html
+
 use http::header::{HeaderMap, HeaderValue, InvalidHeaderValue};
 use num_derive::{FromPrimitive, ToPrimitive};
 use std::fmt;
 use thiserror::Error;
 
-use crate::model::server::Kind as ServerKind;
+use crate::model::server::ServerKind;
 
-/* console abstraction */
-
-/// an abstraction over a nintendo console
-/// implementing some common, necessary operations
-/// in order to act like it without being
-/// aware of what it is
+/// An abstraction over the various console-specific data structures
+///
+/// It provides methods to use the console's data without knowing about the console itself.
 pub trait Console<'a> {
-    /// returns http headers for the provided server. if
-    /// there are no headers to provide, None is returned instead
+    /// Constructs a [`HeaderMap`] from the console's data used when contacting the specified
+    /// [`ServerKind`].
+    ///
+    /// In the event that the console has no headers to provide to the chosen [`ServerKind`], it
+    /// will return an error of [`HeaderConstructionError::UnimplementedServerKind`].
+    ///
+    /// If your console data is invalid in that it is too large/malformed and cannot be placed as a
+    /// header's value, it will return an error of [`HeaderConstructionError::InvalidHeaderValue`].
+    ///
+    /// [`HeaderMap`]: https://docs.rs/http/0.2.1/http/header/struct.HeaderMap.html
+    /// [`ServerKind`]: ../server/enum.ServerKind.html
+    /// [`HeaderConstructionError::UnimplementedServerKind`]: ./enum.HeaderConstructionError.html#variant.UnimplementedServerKind
+    /// [`HeaderConstructionError::InvalidHeaderValue`]: ./enum.HeaderConstructionError.html#variant.InvalidHeaderValue
     fn http_headers(
         &self,
         server: ServerKind<'a>,
@@ -32,29 +52,33 @@ pub trait Console<'a> {
     // there's little need for more abstracted data tidbits to be implemented
 }
 
-/// all possible errors that can occur while constructing a skeleton
+/// A list of possible errors encountered while constructing headers
+///
+/// It is used by all implementors of [`Console`].
+///
+/// [`Console`]: ./trait.Console.html
 #[derive(Error, Debug)]
 pub enum HeaderConstructionError<'a> {
+    /// An error returned when one of your console's details is invalid in the context of a header
+    /// value.
     #[error("`{0}` is an invalid header value")]
     InvalidHeaderValue(#[from] InvalidHeaderValue),
 
+    /// An error returned when the server that you are requesting headers from has no corresponding
+    /// headers to be recieved from the console that you intend to mimic.
     #[error("`{0:?}` is not an implemented ServerKind")]
     UnimplementedServerKind(ServerKind<'a>),
 }
 
-/* common console information */
-
-/// the environment of the console
+/// Enumeration of possible (3ds/WiiU) console environments
 ///
-/// to our knowledge, the integer must be
-/// a single-digit decimal number
+/// While not console-specific, it is not accessible through the [`Console`] trait and must instead
+/// be gotten through the underlying structure.
+///
+/// [`Console`]: ./trait.Console.html
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum Environment {
-    /// this is probably the one you want
-    /// with 1 as the value
     L(u8),
-
-    /// most likely development environments
     D(u8),
     S(u8),
     T(u8),
@@ -77,25 +101,30 @@ impl fmt::Display for Environment {
     }
 }
 
-/// the variant of the device
+/// Enumeration of possible console variants (Developer/Retail)
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum Type {
     Developer = 1,
     Retail = 2,
 }
 
-/// the region of the console
+/// List of possible console regions.
 ///
-/// of these regions, australia is
-/// not an actual game region, and
-/// instead takes european games
+/// The way it appears to be implemented on the console itself matches the implementation of a
+/// bitfield, but here it is instead represented as an enumeration
+///
+/// Side note: Of these regions, [`Region::Australia`] is not a game region, and instead takes
+/// games from [`Region::Europe`].
+///
+/// [`Region::Australia`]: #variant.Australia
+/// [`Region::Europe`]: #variant.Europe
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum Region {
-    Japan = 1,
-    UnitedStates = 2,
-    Europe = 4,
-    Australia = 8,
-    China = 16,
-    Korea = 32,
-    Taiwan = 64,
+    Japan = 0b0000001,
+    UnitedStates = 0b0000010,
+    Europe = 0b0000100,
+    Australia = 0b0001000,
+    China = 0b0010000,
+    Korea = 0b0100000,
+    Taiwan = 0b1000000,
 }
