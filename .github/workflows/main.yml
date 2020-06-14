@@ -15,7 +15,7 @@ jobs:
           profile: minimal
           toolchain: nightly
           override: true
-          component: rustfmt, clippy, cargo-fmt
+          components: rustfmt, clippy
       - name: check to see if source code is formatted
         uses: actions-rs/cargo@v1
         with:
