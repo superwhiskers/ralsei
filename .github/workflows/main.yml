@@ -20,7 +20,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --all-features --all -v -- --check
+          args: --all -v -- --check
       - name: run basic lints as well as see if the source builds
         uses: actions-rs/cargo@v1
         with:
