@@ -1,0 +1,99 @@
+name: rust-source
+on: [push, pull_request]
+env:
+  CARGO_TERM_COLOR: always
+jobs: 
+  clippy_annotations:
+    name: add annotations from clippy lints to the commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout source code
+        uses: actions/checkout@v2
+      - name: install the rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+          component: clippy
+      - name: get clippy annotations
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features --
+  check:
+    name: run linting and formatting tools
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout source code
+        uses: actions/checkout@v2
+      - name: install the rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+          component: rustfmt, clippy
+      - name: check to see if source code is formatted
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all-features --all -v -- --check
+      - name: run basic lints as well as see if the source builds
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --all-features --workspace -vv
+      - name: run more involved lints
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all-features --      
+  test:
+    name: run tests, benchmarks, and get code coverage
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout source code
+      uses: actions/checkout@v2
+    - name: install the rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: nightly
+        override: true
+    - name: run tests
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --workspace -vv 
+    - name: run benchmarks
+      uses: actions-rs/cargo@v1
+      with:
+        command: bench
+        args: --workspace -vv
+    - name: clean workspace
+      uses: actions-rs/cargo@v1
+      with:
+        command: clean
+    - name: install grcov
+      uses: actions-rs/install@v1
+      with:
+        crate: grcov
+        version: latest
+    - name: run tests required to get coverage information
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --no-fail-fast
+      env:
+        CARGO_INCREMENTAL: '0'
+        RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+        RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+    - name: get code coverage
+      id: coverage
+      uses: actions-rs/grcov@v0.1
+    - name: upload coverage report to codecov
+      uses: codecov/codecov-action@v1
+      with:
+        file: ${{ steps.coverage.outputs.report }}
+        fail_ci_if_error: true
