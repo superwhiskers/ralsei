@@ -2,25 +2,7 @@ name: rust-source
 on: [push, pull_request]
 env:
   CARGO_TERM_COLOR: always
-jobs: 
-  clippy_annotations:
-    name: add annotations from clippy lints to the commit
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout source code
-        uses: actions/checkout@v2
-      - name: install the rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-          component: clippy
-      - name: get clippy annotations
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --
+jobs:
   check:
     name: run linting and formatting tools
     runs-on: ubuntu-latest
@@ -33,7 +15,7 @@ jobs:
           profile: minimal
           toolchain: nightly
           override: true
-          component: rustfmt, clippy
+          component: rustfmt, clippy, cargo-fmt
       - name: check to see if source code is formatted
         uses: actions-rs/cargo@v1
         with:
@@ -76,7 +58,7 @@ jobs:
       with:
         command: clean
     - name: install grcov
-      uses: actions-rs/install@v1
+      uses: actions-rs/install@v0.1
       with:
         crate: grcov
         version: latest
