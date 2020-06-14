@@ -14,7 +14,7 @@ use std::borrow::Cow;
 use strum_macros::{Display, EnumString};
 
 use crate::model::{
-    console::common::{Console, Environment, Region, HeaderConstructionError, Type},
+    console::common::{Console, Environment, HeaderConstructionError, Region, Type},
     server::ServerKind,
     title::{id::TitleId, version::TitleVersion},
 };
@@ -133,7 +133,8 @@ impl<'a> Console<'a> for Console3ds<'_> {
                 }
 
                 if let Some(system_version) = &self.system_version {
-                    let _ = h.append("X-Nintendo-System-Version", system_version.parse()?); }
+                    let _ = h.append("X-Nintendo-System-Version", system_version.parse()?);
+                }
 
                 if let Some(region) = self.region {
                     let _ = h.append("X-Nintendo-Region", HeaderValue::from(region as u16));

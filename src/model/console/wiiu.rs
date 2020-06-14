@@ -11,7 +11,7 @@ use hyper::header::{HeaderMap, HeaderValue};
 use std::borrow::Cow;
 
 use crate::model::{
-    console::common::{Console, Environment, Region, HeaderConstructionError, Type},
+    console::common::{Console, Environment, HeaderConstructionError, Region, Type},
     server::ServerKind,
     title::id::TitleId,
 };

@@ -14,7 +14,7 @@ pub const DEFAULT_MII_CDN_HOST: &str = "mii-secure.account.nintendo.net";
 
 /// an enumeration over the nintendo network server kinds.
 /// each of them contains a url pointing to the host
-/// 
+///
 /// the address provided should be the *host* of the server;
 /// it should not be a url to the api endpoint.
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]

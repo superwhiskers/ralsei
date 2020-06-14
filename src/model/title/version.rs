@@ -7,7 +7,7 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
-use ux::{u4, u6};
+use num_x::{u4, u6};
 
 /// a bitmask for extracting the major version
 /// from a title version
@@ -35,19 +35,19 @@ impl TitleVersion {
 
     /// returns the title version's major version
     #[inline]
-    pub fn major(&self) -> u6 {
+    pub fn major(self) -> u6 {
         u6::new((self.0 >> 10) as u8)
     }
 
     /// returns the title version's minor version
     #[inline]
-    pub fn minor(&self) -> u6 {
+    pub fn minor(self) -> u6 {
         u6::new(((self.0 & MINOR_VERSION_BITMASK) >> 4) as u8)
     }
 
     /// returns the title version's micro version
     #[inline]
-    pub fn micro(&self) -> u4 {
+    pub fn micro(self) -> u4 {
         u4::new((self.0 & MICRO_VERSION_BITMASK) as u8)
     }
 }

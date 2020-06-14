@@ -7,11 +7,8 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
-// client implementations
+#![feature(const_fn)]
+
+//pub mod server;
 //pub mod client;
-
-// models of various data formats and containers
 pub mod model;
-
-// error types
-//mod errors;

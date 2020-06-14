@@ -8,5 +8,10 @@
 //
 
 pub mod console;
-pub mod title;
 pub mod server;
+pub mod title;
+
+//TODO(superwhiskers): add the following modules
+//pub mod xml;
+//pub mod prudp;
+//pub mod rmc;
