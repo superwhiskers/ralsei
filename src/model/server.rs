@@ -7,7 +7,7 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
-use std::borrow::Cow;
+use strum_macros::{Display, EnumString, AsRefStr, IntoStaticStr};
 
 pub const DEFAULT_ACCOUNT_SERVER_HOST: &str = "account.nintendo.net";
 pub const DEFAULT_MII_CDN_HOST: &str = "mii-secure.account.nintendo.net";
@@ -17,8 +17,11 @@ pub const DEFAULT_MII_CDN_HOST: &str = "mii-secure.account.nintendo.net";
 ///
 /// the address provided should be the *host* of the server;
 /// it should not be a url to the api endpoint.
-#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(IntoStaticStr, AsRefStr, EnumString, Display, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum ServerKind<'a> {
-    Account(Cow<'a, str>),
-    Mii(Cow<'a, str>),
+    Account(&'a str),
+    Mii(&'a str),
+
+    #[doc(hidden)]
+    NonExhaustive,
 }

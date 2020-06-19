@@ -150,7 +150,7 @@ console
 
 | console | type                | issuer id                           |
 | ------- | ------------------- | ----------------------------------- |
-| wiiu    | (presumably) retail | `Root-CA<%08X>-MS<%08X>             |
+| wiiu    | (presumably) retail | `Root-CA<%08X>-MS<%08X>`            |
 | 3ds     | retail              | `Nintendo CA - G3_NintendoCTR2prod` |
 |         | developer           | `Nintendo CA - G3_NintendoCTR2dev`  |
 

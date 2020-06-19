@@ -11,7 +11,9 @@ use hyper::header::{HeaderMap, HeaderValue};
 use std::borrow::Cow;
 
 use crate::model::{
-    console::common::{Console, Environment, HeaderConstructionError, Region, Type},
+    console::common::{
+        Console, Environment, HeaderConstructionError, Kind as ConsoleKind, Region, Type,
+    },
     server::ServerKind,
     title::id::TitleId,
 };
@@ -69,10 +71,14 @@ pub struct ConsoleWiiU<'a> {
 }
 
 impl<'a> Console<'a> for ConsoleWiiU<'_> {
+    fn kind(&self) -> ConsoleKind {
+        ConsoleKind::WiiU
+    }
+
     fn http_headers(
         &self,
-        server: ServerKind<'a>,
-    ) -> Result<HeaderMap<HeaderValue>, HeaderConstructionError<'a>> {
-        Err(HeaderConstructionError::UnimplementedServerKind(server))
+        server: ServerKind<'_>,
+    ) -> Result<HeaderMap<HeaderValue>, HeaderConstructionError> {
+        Err(HeaderConstructionError::UnimplementedServerKind(server.into()))
     }
 }

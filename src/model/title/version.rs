@@ -11,15 +11,15 @@ use num_x::{u4, u6};
 
 /// a bitmask for extracting the major version
 /// from a title version
-pub const MAJOR_VERSION_BITMASK: u16 = 0b11111100_00000000;
+pub const MAJOR_VERSION_BITMASK: u16 = 0b1111_1100_0000_0000;
 
 /// a bitmask for extracting the minor version
 /// from a title version
-pub const MINOR_VERSION_BITMASK: u16 = 0b00000011_11110000;
+pub const MINOR_VERSION_BITMASK: u16 = 0b0000_0011_1111_0000;
 
 /// a bitmask for extracting the micro version
 /// from a title version
-pub const MICRO_VERSION_BITMASK: u16 = 0b00000000_00001111;
+pub const MICRO_VERSION_BITMASK: u16 = 0b0000_0000_0000_1111;
 
 /// an integer representing the version of a
 /// title on either the 3ds or the wiiu

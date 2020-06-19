@@ -3,8 +3,16 @@ name = "ralsei"
 description = "the fluffiest nintendo network library to exist!"
 version = "0.1.0"
 authors = ["superwhiskers <whiskerdev@protonmail.com>"]
+repository = "https://github.com/superwhiskers/ralsei"
+readme = "https://github.com/superwhiskers/ralsei/blob/master/readme.md"
+keywords = ["nintendo-network", "web", "nintendo", "http", "api", "async", "parser", "protocol", "xml", "network", "client", "server", "networking"]
+categories = ["API bindings", "Encoding", "Network programming", "Parser implementations"]
 edition = "2018"
 license = "MPL-2.0"
+
+[lib]
+name = "ralsei"
+test = true
 
 [dependencies]
 thiserror = "^1.0"
@@ -18,9 +26,15 @@ num-traits = "^0.2"
 ring = "^0.16"
 hyper = "^0.13"
 hyper-rustls = "^0.20"
+rustls = "^0.17"
 isolanguage-1 = "^0.1"
 isocountry = "^0.2"
 http = "^0.2"
 num_x = "^0.2"
 strum = "^0.18"
 strum_macros = "^0.18"
+bitflags = "^1.0"
+futures = "^0.3"
+pem = "^0.8"
+parking_lot = { version = "^0.10", features = ["nightly"] }
+dyn-clone = "^1.0"

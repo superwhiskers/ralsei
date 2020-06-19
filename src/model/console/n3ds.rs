@@ -11,16 +11,16 @@ use http::header::{self, HeaderMap, HeaderValue};
 use isocountry::CountryCode;
 use isolanguage_1::LanguageCode;
 use std::borrow::Cow;
-use strum_macros::{Display, EnumString};
+use strum_macros::{Display, EnumString, AsRefStr, IntoStaticStr};
 
 use crate::model::{
-    console::common::{Console, Environment, HeaderConstructionError, Region, Type},
+    console::common::{Console, Environment, HeaderConstructionError, Region, Type, Kind as ConsoleKind},
     server::ServerKind,
     title::{id::TitleId, version::TitleVersion},
 };
 
 /// the model of the console. data for a 3ds-only header
-#[derive(EnumString, Display, Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(IntoStaticStr, AsRefStr, EnumString, Display, Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum Model {
     #[strum(to_string = "CTR")]
     Nintendo3ds,
@@ -102,10 +102,14 @@ pub struct Console3ds<'a> {
 }
 
 impl<'a> Console<'a> for Console3ds<'_> {
+    fn kind(&self) -> ConsoleKind {
+        ConsoleKind::N3ds
+    }
+
     fn http_headers(
         &self,
-        server: ServerKind<'a>,
-    ) -> Result<HeaderMap<HeaderValue>, HeaderConstructionError<'a>> {
+        server: ServerKind<'_>,
+    ) -> Result<HeaderMap<HeaderValue>, HeaderConstructionError> {
         match server {
             ServerKind::Account(_) => {
                 let mut h = HeaderMap::new();
@@ -199,7 +203,7 @@ impl<'a> Console<'a> for Console3ds<'_> {
                 Ok(h)
             }
             // ServerKind::Mii(host) => [()].into_iter().collect::<HeaderMap<HeaderValue>>(),
-            _ => Err(HeaderConstructionError::UnimplementedServerKind(server)),
+            _ => Err(HeaderConstructionError::UnimplementedServerKind(server.into())),
         }
     }
 }
