@@ -7,21 +7,20 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
-use dyn_clone::clone_box;
-use http::{HeaderMap, HeaderValue};
+use http::{HeaderMap, HeaderValue, Request};
 use hyper::{
-    client::{Client as HttpClient, HttpConnector},
+    client::{Client as HttpClient, HttpConnector, ResponseFuture},
     Body,
 };
 use hyper_rustls::HttpsConnector;
 use parking_lot::RwLock;
-use pem::{self, PemError};
 use rustls::{Certificate, ClientConfig as RustlsClientConfig, PrivateKey, TLSError};
 use std::borrow::Cow;
 use thiserror::Error;
+use webpki::Error as WebpkiError;
 
 use crate::{
-    keypairs::{CTR_COMMON_1_CERT, CTR_COMMON_1_KEY, WIIU_COMMON_1_CERT, WIIU_COMMON_1_KEY},
+    keypairs::{self, CTR_COMMON_1_CERT, CTR_COMMON_1_KEY, WUP_ACCOUNT_1_CERT, WUP_ACCOUNT_1_KEY},
     model::{
         console::common::{Console, HeaderConstructionError, Kind as ConsoleKind},
         server::{ServerKind, DEFAULT_ACCOUNT_SERVER_HOST},
@@ -31,7 +30,7 @@ use crate::{
 /// A client for the Nintendo Network account servers
 ///
 /// -- add more descriptive documentation here --
-pub struct Client<'a> {
+pub struct Client<'a, C: Console<'a> + Send + Clone> {
     /// The host of the account server (not the api endpoint)
     ///
     /// If no value is provided, it is initialized with [`DEFAULT_ACCOUNT_SERVER_HOST`].
@@ -43,7 +42,7 @@ pub struct Client<'a> {
     ///
     /// This field is used to generate a set of HTTP headers that are passed to the server in
     /// requests to mimic a real console.
-    pub console: RwLock<Box<dyn Console<'a> + Send>>,
+    pub console: RwLock<C>,
 
     /// A cache of the headers to avoid recalling [`Console.http_headers()`]
     ///
@@ -54,24 +53,28 @@ pub struct Client<'a> {
     pub(crate) http: HttpClient<HttpsConnector<HttpConnector>, Body>,
 }
 
-impl<'a> Client<'a> {
+impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
     /// Create a new Client using the provided [`Console`]
     ///
     /// If no value for the `host` parameter is provided, the corresponding struct field, [`host`],
     /// is initialized to [`DEFAULT_ACCOUNT_SERVER_HOST`].
     ///
+    /// If no value for the `keypair` parameter is provided, it is initialized to the default
+    /// (official Nintendo) client certificate for the console that the provided [`Console`]
+    /// implementor reports itself as.
+    ///
     /// [`Console`]: ../../model/console/common/trait.Console.html
     /// [`host`]: #structfield.host
     /// [`DEFAULT_ACCOUNT_SERVER_HOST`]: ../../model/server/constant.DEFAULT_ACCOUNT_SERVER_HOST.html
-    pub fn new<'b>(
+    pub fn new(
         host: Option<Cow<'a, str>>,
-        console: Box<dyn Console<'a> + Send>,
+        console: C,
         keypair: Option<(Vec<Certificate>, PrivateKey)>,
     ) -> Result<Self, ClientError> {
         let host = host.unwrap_or(Cow::Borrowed(DEFAULT_ACCOUNT_SERVER_HOST));
         Ok(Client {
             host: RwLock::new(host.clone()),
-            console: RwLock::new(clone_box(&*console)),
+            console: RwLock::new(console.clone()),
             cached_headers: RwLock::new(console.http_headers(ServerKind::Account(&host))?),
             http: HttpClient::builder().build(HttpsConnector::from((HttpConnector::new(), {
                 let mut config = RustlsClientConfig::new();
@@ -80,17 +83,18 @@ impl<'a> Client<'a> {
                 } else {
                     match console.kind() {
                         ConsoleKind::N3ds => (
-                            vec![Certificate(pem::parse(CTR_COMMON_1_CERT)?.contents)],
-                            PrivateKey(pem::parse(CTR_COMMON_1_KEY)?.contents),
+                            vec![Certificate(CTR_COMMON_1_CERT.to_vec())],
+                            PrivateKey(CTR_COMMON_1_KEY.to_vec()),
                         ),
                         ConsoleKind::WiiU => (
-                            vec![Certificate(pem::parse(WIIU_COMMON_1_CERT)?.contents)],
-                            PrivateKey(pem::parse(WIIU_COMMON_1_KEY)?.contents),
+                            vec![Certificate(WUP_ACCOUNT_1_CERT.to_vec())],
+                            PrivateKey(WUP_ACCOUNT_1_KEY.to_vec()),
                         ),
                         kind => return Err(ClientError::UnsupportedConsoleKind(kind)),
                     }
                 };
                 config.set_single_client_cert(certs, key)?;
+                config.root_store = keypairs::generate_cacert_bundle()?;
                 config
             }))),
         })
@@ -103,12 +107,25 @@ impl<'a> Client<'a> {
     ///
     /// [`console`]: #structfield.console
     /// [`host`]: #structfield.host
-    pub fn refresh_header<'b>(&self) -> Result<(), HeaderConstructionError> {
-        Ok(*self.cached_headers.write() = self
+    pub fn refresh_header(&self) -> Result<(), HeaderConstructionError> {
+        *self.cached_headers.write() = self
             .console
             .read()
-            .http_headers(ServerKind::Account(&self.host.read()))?)
+            .http_headers(ServerKind::Account(&self.host.read()))?;
+        Ok(())
     }
+
+    /// Execute a request using the provided [`Request`]
+    ///
+    /// [`Request`]: https://docs.rs/http/0.2.1/http/request/struct.Request.html
+    pub fn request(&self, mut request: Request<Body>) -> ResponseFuture {
+        request
+            .headers_mut()
+            .extend(self.cached_headers.read().clone());
+        self.http.request(request)
+    }
+
+    // Check if a user with the given NNID exists on the provided account server
 }
 
 /// A list of possible errors encountered while using the [`Client`]
@@ -128,13 +145,13 @@ pub enum ClientError {
     #[error("An error was encountered while constructing headers")]
     HeaderConstructionError(#[from] HeaderConstructionError),
 
-    /// An error encountered if PEM-encoded data is found to be invalid
-    #[error("An error was encountered while parsing a PEM file")]
-    PemError(#[from] PemError),
-
     /// An error encountered if a TLSError arises
     #[error("An error was encountered while using the TLS protocol")]
     TLSError(#[from] TLSError),
+
+    /// An error encountered if a webpki::Error arises
+    #[error("An error was encountered while using the `webpki` library")]
+    WebpkiError(#[from] WebpkiError),
 
     #[doc(hidden)]
     #[error("You shouldn't be seeing this error. Please file an issue on the git repository")]

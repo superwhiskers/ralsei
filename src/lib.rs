@@ -34,6 +34,9 @@
 #![feature(const_fn)]
 
 //pub mod server;
+
+#[cfg(feature = "client")]
 pub mod client;
-pub mod model;
+
 pub mod keypairs;
+pub mod model;

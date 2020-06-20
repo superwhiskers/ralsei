@@ -11,16 +11,31 @@ use http::header::{self, HeaderMap, HeaderValue};
 use isocountry::CountryCode;
 use isolanguage_1::LanguageCode;
 use std::borrow::Cow;
-use strum_macros::{Display, EnumString, AsRefStr, IntoStaticStr};
+use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
 
 use crate::model::{
-    console::common::{Console, Environment, HeaderConstructionError, Region, Type, Kind as ConsoleKind},
+    console::common::{
+        Console, Environment, HeaderConstructionError, Kind as ConsoleKind, Region, Type,
+    },
     server::ServerKind,
     title::{id::TitleId, version::TitleVersion},
 };
 
 /// the model of the console. data for a 3ds-only header
-#[derive(IntoStaticStr, AsRefStr, EnumString, Display, Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(
+    IntoStaticStr,
+    AsRefStr,
+    EnumString,
+    Display,
+    Copy,
+    Clone,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    PartialOrd,
+    Ord,
+)]
 pub enum Model {
     #[strum(to_string = "CTR")]
     Nintendo3ds,
@@ -203,7 +218,9 @@ impl<'a> Console<'a> for Console3ds<'_> {
                 Ok(h)
             }
             // ServerKind::Mii(host) => [()].into_iter().collect::<HeaderMap<HeaderValue>>(),
-            _ => Err(HeaderConstructionError::UnimplementedServerKind(server.into())),
+            _ => Err(HeaderConstructionError::UnimplementedServerKind(
+                server.into(),
+            )),
         }
     }
 }

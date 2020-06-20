@@ -3,7 +3,7 @@
 across the various servers, one can find a variety of headers being
 sent in http requests. because of their potentially incriminating
 value, this document serves as documentation of their construction
-and purpose.
+and purpose
 
 ## account client (`*.account.nintendo.net`/`account.nintendo.net`)
 
@@ -33,7 +33,7 @@ these following headers are ones that are not known to
 be provided by all consoles, and as such, they go here.
 none of them are not important to emulate a console,
 but they may be useful for extremely accurate mimicking
-of one to avoid being banned.
+of one to avoid being banned
 
 | field             | type   | description                                              |
 | ----------------- | ------ | -------------------------------------------------------- |
@@ -68,7 +68,7 @@ games from the `EUR` region
 
 the `X-Nintendo-System-Version` header gets its information
 from a specific title, which varies across regions and
-consoles.
+consoles
 
 the following table contains the title id of each title
 whose version is used as the information for
@@ -100,7 +100,7 @@ headers are two headers provided by both the 3ds and wii u
 to the account server (and so far, it appears to only be
 the account server). contrary to what they are named, they
 do not appear to be console-specific (device granularity)
-and instead differ on more general boundaries.
+and instead differ on more general boundaries
 
 here are some known pairs
 
@@ -113,14 +113,14 @@ here are some known pairs
 they appear to be oauth client id/secrets, and also appear
 to have the property of region and console (family)
 specificity. aside from that, there isn't much else known
-about them.
+about them
 
 #### device cert
 
 the `X-Nintendo-Device-Cert` header contains a console
 unique certificate that is used for signing titles. on
 the 3ds, it is sent in all requests made to the account
-server, whereas on the wii u, it is only sent in some.
+server, whereas on the wii u, it is only sent in some
 
 it consists of 384 base64-encoded bytes. the layout of
 them is as follows:
@@ -164,7 +164,7 @@ the key id/device id section is one of the following
 in the 3ds format, the first parameter is your device id,
 and the second is either `00` for a retail certificate or
 `01` for a development one. in the wii u format, the only
-parameter is the device id.
+parameter is the device id
 
 more detailed information regarding the device
 certificate, and more generally, the certificate format
@@ -192,7 +192,7 @@ footnote:
   any headers that are not provided on all
   endpoints, with the exception of the
   `Authorization` header provided on necessary
-  endpoints.
+  endpoints
 - on some endpoints, there are two
   `X-Nintendo-Device-Cert` headers provided
   that are exactly the same, instead of one.
@@ -200,7 +200,7 @@ footnote:
   seen. this is speculated to be the result
   of nintendo adding the certificate to all
   endpoints, duplicating it on the ones that
-  it was already provided to.
+  it was already provided to
 
 #### device model
 

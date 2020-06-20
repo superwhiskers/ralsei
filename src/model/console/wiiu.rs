@@ -79,6 +79,8 @@ impl<'a> Console<'a> for ConsoleWiiU<'_> {
         &self,
         server: ServerKind<'_>,
     ) -> Result<HeaderMap<HeaderValue>, HeaderConstructionError> {
-        Err(HeaderConstructionError::UnimplementedServerKind(server.into()))
+        Err(HeaderConstructionError::UnimplementedServerKind(
+            server.into(),
+        ))
     }
 }
