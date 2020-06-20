@@ -46,4 +46,4 @@ hyper-rustls = { version = "^0.20", optional = true }
 parking_lot = { version = "^0.10", features = ["nightly"], optional = true }
 
 # dependencies needed by mii-renderer
-vulkano = { version = "^0.18", optional = true }
+vulkano = { version = "^0.19", optional = true }
