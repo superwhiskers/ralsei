@@ -7,12 +7,10 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
-pub mod console;
-pub mod server;
-pub mod title;
-pub mod xml;
-pub mod network;
+use std::borrow::Cow;
 
-//TODO(superwhiskers): add the following modules
-//pub mod prudp;
-//pub mod rmc;
+/// A Nintendo Network Id
+pub struct Nnid<'a>(pub Cow<'a, str>);
+
+/// A PID associated with a Nintendo Network Id
+pub struct Pid(pub u32);
