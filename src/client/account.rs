@@ -14,6 +14,7 @@ use hyper::{
 };
 use hyper_rustls::HttpsConnector;
 use parking_lot::RwLock;
+use quick_xml::de::{from_str as xml_from_str, DeError as XmlDeError};
 use rustls::{Certificate, ClientConfig as RustlsClientConfig, PrivateKey, TLSError};
 use std::borrow::Cow;
 use thiserror::Error;
@@ -24,6 +25,7 @@ use crate::{
     model::{
         console::common::{Console, HeaderConstructionError, Kind as ConsoleKind},
         server::{ServerKind, DEFAULT_ACCOUNT_SERVER_HOST},
+        xml::error_xml,
     },
 };
 

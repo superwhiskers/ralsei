@@ -22,7 +22,7 @@ mii-renderer = ["vulkano"]
 
 [dependencies]
 thiserror = "^1.0"
-serde = "^1.0"
+serde = { version = "^1.0", features = ["derive"] }
 byteorder = "^1.0"
 num-derive = "^0.3"
 num-traits = "^0.2"
@@ -38,7 +38,7 @@ rustls = { version = "^0.17", optional = true }
 
 # dependencies needed by client
 tokio = { version = "^0.2", features = ["full"], optional = true }
-quick-xml = { version = "^0.18", optional = true }
+quick-xml = { version = "^0.18", features = ["serialize"], optional = true }
 ring = { version = "^0.16", optional = true }
 futures = { version = "^0.3", optional = true }
 hyper = { version = "^0.13", optional = true }

@@ -200,7 +200,7 @@ impl<'a> Console<'a> for Console3ds<'_> {
                 if let Some(title_version) = self.title_version {
                     let _ = h.append(
                         "X-Nintendo-Application-Version",
-                        format!("{:04X}", u16::from(title_version.major())).parse()?,
+                        format!("{:0>4X}", u16::from(title_version.major())).parse()?,
                     );
                 }
 

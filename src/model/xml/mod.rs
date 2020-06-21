@@ -7,12 +7,4 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
-pub mod console;
-pub mod server;
-pub mod title;
-pub mod xml;
-
-//TODO(superwhiskers): add the following modules
-//pub mod network;
-//pub mod prudp;
-//pub mod rmc;
+pub mod error_xml;
