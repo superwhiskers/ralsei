@@ -117,10 +117,24 @@ impl FromPrimitive for ErrorCode {
         })
     }
 
+    fn from_i16(n: i16) -> Option<Self> {
+        Some(match ErrorCodeValue::from_u16(n as u16) {
+            Some(known_code) => Self::Known(known_code),
+            None => Self::Unknown(n as u16),
+        })
+    }
+
     fn from_u64(n: u64) -> Option<Self> {
         Some(match ErrorCodeValue::from_u16(n as u16) {
             Some(known_code) => Self::Known(known_code),
             None => Self::Unknown(n as u16),
+        })
+    }
+
+    fn from_u16(n: u16) -> Option<Self> {
+        Some(match ErrorCodeValue::from_u16(n) {
+            Some(known_code) => Self::Known(known_code),
+            None => Self::Unknown(n),
         })
     }
 }
@@ -133,10 +147,24 @@ impl ToPrimitive for ErrorCode {
         })
     }
 
+    fn to_i16(&self) -> Option<i16> {
+        Some(match self {
+            Self::Known(code) => code.to_i16().unwrap_or(0),
+            Self::Unknown(code) => *code as i16, // lossy
+        })
+    }
+
     fn to_u64(&self) -> Option<u64> {
         Some(match self {
             Self::Known(code) => code.to_u64().unwrap_or(0),
             Self::Unknown(code) => u64::from(*code),
+        })
+    }
+
+    fn to_u16(&self) -> Option<u16> {
+        Some(match self {
+            Self::Known(code) => code.to_u16().unwrap_or(0),
+            Self::Unknown(code) => *code,
         })
     }
 }
