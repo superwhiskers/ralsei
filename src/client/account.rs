@@ -7,6 +7,7 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
+use futures::stream::TryStreamExt;
 use http::{
     uri::{Authority, InvalidUri, PathAndQuery},
     Error as HttpError, HeaderMap, HeaderValue, Request, Uri, Version as HttpVersion,
@@ -17,11 +18,11 @@ use hyper::{
 };
 use hyper_rustls::HttpsConnector;
 use parking_lot::RwLock;
-use quick_xml::de::{from_str as xml_from_str, DeError as XmlDeError};
+use quick_xml::de::{from_reader as xml_from_reader, DeError as XmlDeError};
 use rustls::{
     Certificate, ClientConfig as RustlsClientConfig, PrivateKey, RootCertStore, TLSError,
 };
-use std::{borrow::Cow, convert::TryFrom, sync::Arc};
+use std::{borrow::Cow, convert::TryFrom, io::BufReader, sync::Arc};
 use thiserror::Error;
 use webpki::Error as WebpkiError;
 
@@ -31,7 +32,7 @@ use crate::{
         console::common::{Console, HeaderConstructionError, Kind as ConsoleKind},
         network::Nnid,
         server::{ServerKind, DEFAULT_ACCOUNT_SERVER_HOST},
-        xml::error_xml::Errors as ErrorXml,
+        xml::error_xml,
     },
 };
 
@@ -166,13 +167,28 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
                     .body(Body::empty())?,
             )
             .await?;
-        /*match response.status().as_u16() {
+        match response.status().as_u16() {
             200 => Ok(false),
-            400 => // can exist,
-            401 => Err(
-        }*/
-        // TODO(superwhiskers): fix this
-        Ok(true)
+            400 | 401 => {
+                let error = xml_from_reader::<_, error_xml::Errors>(BufReader::new(
+                    response
+                        .into_body()
+                        .try_fold(Vec::new(), |mut accumulator, chunk| async move {
+                            accumulator.extend_from_slice(&chunk);
+                            Ok(accumulator)
+                        })
+                        .await?
+                        .as_slice(),
+                ))?;
+                match error.first_code() {
+                    Some(error_xml::ErrorCode::Known(
+                        error_xml::ErrorCodeValue::AccountIdExists,
+                    )) => Ok(true),
+                    _ => Err(error.into()),
+                }
+            }
+            status => Err(ClientError::UnknownStatusCode(status)),
+        }
     }
 }
 
@@ -203,7 +219,7 @@ pub enum ClientError {
 
     /// An error encountered if the Nintendo Network API raises an error
     #[error("An error was encountered while using the Nintendo Network account API")]
-    ErrorXml(#[from] ErrorXml),
+    ErrorXml(#[from] error_xml::Errors),
 
     /// An error was encountered while using hyper
     #[error("An error was encountered while using the `hyper` library")]
@@ -216,6 +232,14 @@ pub enum ClientError {
     /// An error was encountered while constructing a Uri
     #[error("An error was encountered while constructing a Uri")]
     UriConstructionError(#[from] InvalidUri),
+
+    /// An error was encountered while deserializing XML
+    #[error("An error was encountered while deserializing XML")]
+    XmlDeError(#[from] XmlDeError),
+
+    /// The Nintendo Network API returned an unknown status code
+    #[error("The Nintendo Network API returned an unknown status code, `{0}`")]
+    UnknownStatusCode(u16),
 
     #[doc(hidden)]
     #[error("You shouldn't be seeing this error. Please file an issue on the git repository")]

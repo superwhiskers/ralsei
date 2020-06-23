@@ -26,6 +26,23 @@ pub struct Errors {
     pub errors: Vec<Error>,
 }
 
+impl Errors {
+    /// Returns the first [`Error`] or `None` if there are none
+    ///
+    /// [`Error`]: ./struct.Error.html
+    pub fn first(&self) -> Option<&Error> {
+        self.errors.first()
+    }
+
+    /// Returns the first [`Error`]'s [`ErrorCode`] or `None` if there are none
+    ///
+    /// [`Error`]: ./struct.Error.html
+    /// [`ErrorCode`]: ./struct.ErrorCode.html
+    pub fn first_code(&self) -> Option<&ErrorCode> {
+        self.errors.first().map(|v| &v.code)
+    }
+}
+
 impl fmt::Display for Errors {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         // here, we assume that there is only one error present. this presumption has held true in
