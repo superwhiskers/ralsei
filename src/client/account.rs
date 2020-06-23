@@ -7,16 +7,21 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
-use http::{HeaderMap, HeaderValue, Request};
+use http::{
+    uri::{Authority, InvalidUri, PathAndQuery},
+    Error as HttpError, HeaderMap, HeaderValue, Request, Uri, Version as HttpVersion,
+};
 use hyper::{
     client::{Client as HttpClient, HttpConnector, ResponseFuture},
-    Body,
+    Body, Error as HyperError,
 };
 use hyper_rustls::HttpsConnector;
 use parking_lot::RwLock;
 use quick_xml::de::{from_str as xml_from_str, DeError as XmlDeError};
-use rustls::{Certificate, ClientConfig as RustlsClientConfig, PrivateKey, TLSError};
-use std::borrow::Cow;
+use rustls::{
+    Certificate, ClientConfig as RustlsClientConfig, PrivateKey, RootCertStore, TLSError,
+};
+use std::{borrow::Cow, convert::TryFrom, sync::Arc};
 use thiserror::Error;
 use webpki::Error as WebpkiError;
 
@@ -24,8 +29,9 @@ use crate::{
     keypairs::{self, CTR_COMMON_1_CERT, CTR_COMMON_1_KEY, WUP_ACCOUNT_1_CERT, WUP_ACCOUNT_1_KEY},
     model::{
         console::common::{Console, HeaderConstructionError, Kind as ConsoleKind},
+        network::Nnid,
         server::{ServerKind, DEFAULT_ACCOUNT_SERVER_HOST},
-        xml::error_xml,
+        xml::error_xml::Errors as ErrorXml,
     },
 };
 
@@ -44,7 +50,7 @@ pub struct Client<'a, C: Console<'a> + Send + Clone> {
     ///
     /// This field is used to generate a set of HTTP headers that are passed to the server in
     /// requests to mimic a real console.
-    pub console: RwLock<C>,
+    pub console: Arc<RwLock<C>>,
 
     /// A cache of the headers to avoid recalling [`Console.http_headers()`]
     ///
@@ -65,25 +71,31 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
     /// (official Nintendo) client certificate for the console that the provided [`Console`]
     /// implementor reports itself as.
     ///
+    /// If no value for the `cacert_bundle` parameter is provided, it is initialized to the default
+    /// (official Nintendo) certificate authority bundle using [`generate_cacert_bundle`]
+    ///
     /// [`Console`]: ../../model/console/common/trait.Console.html
     /// [`host`]: #structfield.host
     /// [`DEFAULT_ACCOUNT_SERVER_HOST`]: ../../model/server/constant.DEFAULT_ACCOUNT_SERVER_HOST.html
+    /// [`generate_cacert_bundle`]: ../../keypairs/fn.generate_cacert_bundle.html
     pub fn new(
         host: Option<Cow<'a, str>>,
-        console: C,
+        console: Arc<RwLock<C>>,
         keypair: Option<(Vec<Certificate>, PrivateKey)>,
+        cacert_bundle: Option<RootCertStore>,
     ) -> Result<Self, ClientError> {
         let host = host.unwrap_or(Cow::Borrowed(DEFAULT_ACCOUNT_SERVER_HOST));
         Ok(Client {
             host: RwLock::new(host.clone()),
-            console: RwLock::new(console.clone()),
-            cached_headers: RwLock::new(console.http_headers(ServerKind::Account(&host))?),
+            console: Arc::clone(&console),
+            cached_headers: RwLock::new(console.read().http_headers(ServerKind::Account(&host))?),
             http: HttpClient::builder().build(HttpsConnector::from((HttpConnector::new(), {
                 let mut config = RustlsClientConfig::new();
+
                 let (certs, key) = if let Some(keypair) = keypair {
                     keypair
                 } else {
-                    match console.kind() {
+                    match console.read().kind() {
                         ConsoleKind::N3ds => (
                             vec![Certificate(CTR_COMMON_1_CERT.to_vec())],
                             PrivateKey(CTR_COMMON_1_KEY.to_vec()),
@@ -96,7 +108,13 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
                     }
                 };
                 config.set_single_client_cert(certs, key)?;
-                config.root_store = keypairs::generate_cacert_bundle()?;
+
+                if let Some(cacert_bundle) = cacert_bundle {
+                    config.root_store = cacert_bundle;
+                } else {
+                    config.root_store = keypairs::generate_cacert_bundle()?;
+                }
+
                 config
             }))),
         })
@@ -109,7 +127,7 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
     ///
     /// [`console`]: #structfield.console
     /// [`host`]: #structfield.host
-    pub fn refresh_header(&self) -> Result<(), HeaderConstructionError> {
+    pub fn refresh_header(&self) -> Result<(), ClientError> {
         *self.cached_headers.write() = self
             .console
             .read()
@@ -127,7 +145,35 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
         self.http.request(request)
     }
 
-    // Check if a user with the given NNID exists on the provided account server
+    /// Check if a user with the given [`Nnid`] exists on the provided account server
+    ///
+    /// [`Nnid`]: ../../model/network/struct.Nnid.html
+    pub async fn does_user_exist(&self, nnid: Nnid<'_>) -> Result<bool, ClientError> {
+        let mut nnid = nnid.0.into_owned();
+        nnid.insert_str(0, "/people/");
+        let response = self
+            .request(
+                Request::builder()
+                    .method("GET")
+                    .uri(
+                        Uri::builder()
+                            .scheme("https")
+                            .authority(Authority::try_from(self.host.read().as_ref())?)
+                            .path_and_query(PathAndQuery::try_from(nnid.as_str())?)
+                            .build()?,
+                    )
+                    .version(HttpVersion::HTTP_11)
+                    .body(Body::empty())?,
+            )
+            .await?;
+        /*match response.status().as_u16() {
+            200 => Ok(false),
+            400 => // can exist,
+            401 => Err(
+        }*/
+        // TODO(superwhiskers): fix this
+        Ok(true)
+    }
 }
 
 /// A list of possible errors encountered while using the [`Client`]
@@ -154,6 +200,22 @@ pub enum ClientError {
     /// An error encountered if a webpki::Error arises
     #[error("An error was encountered while using the `webpki` library")]
     WebpkiError(#[from] WebpkiError),
+
+    /// An error encountered if the Nintendo Network API raises an error
+    #[error("An error was encountered while using the Nintendo Network account API")]
+    ErrorXml(#[from] ErrorXml),
+
+    /// An error was encountered while using hyper
+    #[error("An error was encountered while using the `hyper` library")]
+    HyperError(#[from] HyperError),
+
+    /// An error was encountered while using the http library
+    #[error("An error was encountered while using the `http` library")]
+    HttpError(#[from] HttpError),
+
+    /// An error was encountered while constructing a Uri
+    #[error("An error was encountered while constructing a Uri")]
+    UriConstructionError(#[from] InvalidUri),
 
     #[doc(hidden)]
     #[error("You shouldn't be seeing this error. Please file an issue on the git repository")]

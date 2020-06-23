@@ -8,10 +8,10 @@
 //
 
 pub mod console;
+pub mod network;
 pub mod server;
 pub mod title;
 pub mod xml;
-pub mod network;
 
 //TODO(superwhiskers): add the following modules
 //pub mod prudp;

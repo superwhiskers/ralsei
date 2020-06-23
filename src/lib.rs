@@ -31,6 +31,7 @@
 #![deny(clippy::large_digit_groups)]
 #![deny(clippy::wildcard_dependencies)]
 #![deny(clippy::wildcard_imports)]
+#![feature(bool_to_option)]
 #![feature(const_fn)]
 
 //pub mod server;
