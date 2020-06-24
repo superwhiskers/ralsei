@@ -16,18 +16,18 @@ use hyper::{
     client::{Client as HttpClient, HttpConnector, ResponseFuture},
     Body, Error as HyperError,
 };
-use hyper_rustls::HttpsConnector;
+use hyper_tls::HttpsConnector;
+use native_tls::{
+    Certificate, Error as NativeTlsError, Identity, TlsConnector as NativeTlsConnector,
+};
 use parking_lot::RwLock;
 use quick_xml::de::{from_reader as xml_from_reader, DeError as XmlDeError};
-use rustls::{
-    Certificate, ClientConfig as RustlsClientConfig, PrivateKey, RootCertStore, TLSError,
-};
 use std::{borrow::Cow, convert::TryFrom, io::BufReader, sync::Arc};
 use thiserror::Error;
-use webpki::Error as WebpkiError;
+use tokio_tls::TlsConnector;
 
 use crate::{
-    keypairs::{self, CTR_COMMON_1_CERT, CTR_COMMON_1_KEY, WUP_ACCOUNT_1_CERT, WUP_ACCOUNT_1_KEY},
+    keypairs::{CTR_COMMON_1, NINTENDO_CACERTS, WUP_ACCOUNT_1},
     model::{
         console::common::{Console, HeaderConstructionError, Kind as ConsoleKind},
         network::Nnid,
@@ -79,45 +79,49 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
     /// [`host`]: #structfield.host
     /// [`DEFAULT_ACCOUNT_SERVER_HOST`]: ../../model/server/constant.DEFAULT_ACCOUNT_SERVER_HOST.html
     /// [`generate_cacert_bundle`]: ../../keypairs/fn.generate_cacert_bundle.html
-    pub fn new(
+    pub fn new<'b>(
         host: Option<Cow<'a, str>>,
         console: Arc<RwLock<C>>,
-        keypair: Option<(Vec<Certificate>, PrivateKey)>,
-        cacert_bundle: Option<RootCertStore>,
+        identity: Option<Identity>,
+        cacert_bundle: Option<Cow<'b, [Certificate]>>,
     ) -> Result<Self, ClientError> {
         let host = host.unwrap_or(Cow::Borrowed(DEFAULT_ACCOUNT_SERVER_HOST));
         Ok(Client {
             host: RwLock::new(host.clone()),
             console: Arc::clone(&console),
             cached_headers: RwLock::new(console.read().http_headers(ServerKind::Account(&host))?),
-            http: HttpClient::builder().build(HttpsConnector::from((HttpConnector::new(), {
-                let mut config = RustlsClientConfig::new();
+            http: HttpClient::builder().build(HttpsConnector::from((
+                {
+                    let mut http = HttpConnector::new();
+                    http.enforce_http(false);
+                    http
+                },
+                TlsConnector::from({
+                    let mut builder = NativeTlsConnector::builder();
 
-                let (certs, key) = if let Some(keypair) = keypair {
-                    keypair
-                } else {
-                    match console.read().kind() {
-                        ConsoleKind::N3ds => (
-                            vec![Certificate(CTR_COMMON_1_CERT.to_vec())],
-                            PrivateKey(CTR_COMMON_1_KEY.to_vec()),
-                        ),
-                        ConsoleKind::WiiU => (
-                            vec![Certificate(WUP_ACCOUNT_1_CERT.to_vec())],
-                            PrivateKey(WUP_ACCOUNT_1_KEY.to_vec()),
-                        ),
-                        kind => return Err(ClientError::UnsupportedConsoleKind(kind)),
+                    builder.identity(if let Some(identity) = identity {
+                        identity
+                    } else {
+                        match console.read().kind() {
+                            ConsoleKind::N3ds => Identity::from_pkcs12(CTR_COMMON_1, "ralsei")?,
+                            ConsoleKind::WiiU => Identity::from_pkcs12(WUP_ACCOUNT_1, "ralsei")?,
+                            kind => return Err(ClientError::UnsupportedConsoleKind(kind)),
+                        }
+                    });
+
+                    if let Some(cacert_bundle) = cacert_bundle {
+                        for cert in cacert_bundle.into_owned() {
+                            builder.add_root_certificate(cert);
+                        }
+                    } else {
+                        for cert in &NINTENDO_CACERTS {
+                            builder.add_root_certificate(Certificate::from_der(cert)?);
+                        }
                     }
-                };
-                config.set_single_client_cert(certs, key)?;
 
-                if let Some(cacert_bundle) = cacert_bundle {
-                    config.root_store = cacert_bundle;
-                } else {
-                    config.root_store = keypairs::generate_cacert_bundle()?;
-                }
-
-                config
-            }))),
+                    builder.build()?
+                }),
+            ))),
         })
     }
 
@@ -151,7 +155,7 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
     /// [`Nnid`]: ../../model/network/struct.Nnid.html
     pub async fn does_user_exist(&self, nnid: Nnid<'_>) -> Result<bool, ClientError> {
         let mut nnid = nnid.0.into_owned();
-        nnid.insert_str(0, "/people/");
+        nnid.insert_str(0, "/v1/api/people/");
         let response = self
             .request(
                 Request::builder()
@@ -209,13 +213,9 @@ pub enum ClientError {
     #[error("An error was encountered while constructing headers")]
     HeaderConstructionError(#[from] HeaderConstructionError),
 
-    /// An error encountered if a TLSError arises
-    #[error("An error was encountered while using the TLS protocol")]
-    TLSError(#[from] TLSError),
-
-    /// An error encountered if a webpki::Error arises
-    #[error("An error was encountered while using the `webpki` library")]
-    WebpkiError(#[from] WebpkiError),
+    /// An error encountered while using the native tls implementation
+    #[error("An error was encountered while using the native tls implementation")]
+    NativeTlsError(#[from] NativeTlsError),
 
     /// An error encountered if the Nintendo Network API raises an error
     #[error("An error was encountered while using the Nintendo Network account API")]

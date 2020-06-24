@@ -17,12 +17,13 @@ use serde::{
 use std::{error, fmt};
 
 /// A representation of a Nintendo Network error xml document
-#[serde(rename = "errors")]
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[serde(rename = "errors", default)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Errors {
     /// A vector of [`Error`] types
     ///
     /// [`Error`]: ./struct.Error.html
+    #[serde(rename = "error", default)]
     pub errors: Vec<Error>,
 }
 
@@ -66,8 +67,8 @@ impl error::Error for Errors {
 }
 
 /// A Nintendo Network account server error
-#[serde(rename = "error")]
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[serde(rename = "error", default)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Error {
     /// The cause of the error
     pub cause: Option<String>,
@@ -124,6 +125,12 @@ pub enum ErrorCode {
 
     #[error("An unknown error has occurred ({0})")]
     Unknown(u16),
+}
+
+impl Default for ErrorCode {
+    fn default() -> Self {
+        Self::Unknown(0)
+    }
 }
 
 impl FromPrimitive for ErrorCode {
