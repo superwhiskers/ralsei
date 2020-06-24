@@ -73,12 +73,12 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
     /// implementor reports itself as.
     ///
     /// If no value for the `cacert_bundle` parameter is provided, it is initialized to the default
-    /// (official Nintendo) certificate authority bundle using [`generate_cacert_bundle`]
+    /// (official Nintendo) certificate authority bundle, [`NINTENDO_CACERTS`]
     ///
     /// [`Console`]: ../../model/console/common/trait.Console.html
     /// [`host`]: #structfield.host
     /// [`DEFAULT_ACCOUNT_SERVER_HOST`]: ../../model/server/constant.DEFAULT_ACCOUNT_SERVER_HOST.html
-    /// [`generate_cacert_bundle`]: ../../keypairs/fn.generate_cacert_bundle.html
+    /// [`NINTENDO_CACERTS`]: ../../keypairs/constant.NINTENDO_CACERTS.html
     pub fn new<'b>(
         host: Option<Cow<'a, str>>,
         console: Arc<RwLock<C>>,
