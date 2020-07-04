@@ -154,8 +154,8 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
     ///
     /// [`Nnid`]: ../../model/network/struct.Nnid.html
     pub async fn does_user_exist(&self, nnid: Nnid<'_>) -> Result<bool, ClientError> {
-        let mut nnid = nnid.0.into_owned();
-        nnid.insert_str(0, "/v1/api/people/");
+        let mut path = nnid.0.into_owned();
+        path.insert_str(0, "/v1/api/people/");
         let response = self
             .request(
                 Request::builder()
@@ -164,7 +164,7 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
                         Uri::builder()
                             .scheme("https")
                             .authority(Authority::try_from(self.host.read().as_ref())?)
-                            .path_and_query(PathAndQuery::try_from(nnid.as_str())?)
+                            .path_and_query(PathAndQuery::try_from(path.as_str())?)
                             .build()?,
                     )
                     .version(HttpVersion::HTTP_11)
