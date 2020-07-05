@@ -7,12 +7,12 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
+pub mod certificate;
 pub mod console;
 pub mod network;
 pub mod server;
 pub mod title;
 pub mod xml;
-pub mod certificate;
 
 //TODO(superwhiskers): add the following modules
 //pub mod prudp;

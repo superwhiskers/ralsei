@@ -18,7 +18,10 @@ use crate::model::{
         Console, Environment, HeaderConstructionError, Kind as ConsoleKind, Region, Type,
     },
     server::ServerKind,
-    title::{id::TitleId, version::TitleVersion},
+    title::{
+        id::{TitleId, UniqueId},
+        version::TitleVersion,
+    },
 };
 
 /// the model of the console. data for a 3ds-only header
@@ -89,11 +92,11 @@ pub struct Console3ds<'a> {
     /// provides `X-Nintendo-Environment`
     pub environment: Option<Environment>,
 
-    /// the unique id is constructed from this, as it is a mere segment
-    /// if this field is omitted, the following headers are also omitted as a result
-    /// - `X-Nintendo-Title-ID`
-    /// - `X-Nintendo-Unique-ID`
+    /// provides: `X-Nintendo-Title-ID`
     pub title_id: Option<TitleId>,
+
+    /// provides: `X-Nintendo-Unique-ID`
+    pub unique_id: Option<UniqueId>,
 
     /// provides `X-Nintendo-Application-Version`
     pub title_version: Option<TitleVersion>,
@@ -217,7 +220,6 @@ impl<'a> Console<'a> for Console3ds<'_> {
 
                 Ok(h)
             }
-            // ServerKind::Mii(host) => [()].into_iter().collect::<HeaderMap<HeaderValue>>(),
             _ => Err(HeaderConstructionError::UnimplementedServerKind(
                 server.into(),
             )),
