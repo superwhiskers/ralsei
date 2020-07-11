@@ -82,7 +82,7 @@ impl<'a> Certificate<'a> {
     /// Converts a [`Certificate`] into a byte vector
     ///
     /// [`Certificate`]: ./struct.Certificate.html
-    pub fn into_bytes(&self) -> Result<Vec<u8>, CertificateError> {
+    pub fn to_bytes(&self) -> Result<Vec<u8>, CertificateError> {
         let mut certificate = Vec::new();
 
         macro_rules! signature_match_clause {
@@ -97,6 +97,7 @@ impl<'a> Certificate<'a> {
                 certificate.extend([0; $padding_size].as_ref());
             }};
         }
+
         match &self.signature {
             Signature::Rsa4096WithSha1(signature) => {
                 signature_match_clause!(Rsa4096WithSha1, signature, 0x3c)
@@ -188,63 +189,42 @@ impl TryFrom<&[u8]> for Certificate<'_> {
                 .expect(Self::SLICE_TO_ARRAY_PANIC_MESSAGE),
         );
 
+        macro_rules! signature_magic_match_clause {
+            ($signature_kind:ident, $signature_limit:literal, $padding_end:literal) => {
+                (
+                    Signature::$signature_kind(Cow::Owned(
+                        value
+                            .get(0x4..$signature_limit)
+                            .ok_or(CertificateError::OutOfBounds)?
+                            .to_owned(),
+                    )),
+                    $padding_end,
+                )
+            };
+        }
+
         let (signature, offset) = match SignatureMagic::from_u32(signature_type)
             .ok_or(CertificateError::UnsupportedSignatureType(signature_type))?
         {
-            SignatureMagic::Rsa4096WithSha1 => (
-                Signature::Rsa4096WithSha1(Cow::Owned(
-                    value
-                        .get(0x4..0x204)
-                        .ok_or(CertificateError::OutOfBounds)?
-                        .to_owned(),
-                )),
-                0x240,
-            ),
-            SignatureMagic::Rsa2048WithSha1 => (
-                Signature::Rsa2048WithSha1(Cow::Owned(
-                    value
-                        .get(0x4..0x104)
-                        .ok_or(CertificateError::OutOfBounds)?
-                        .to_owned(),
-                )),
-                0x140,
-            ),
-            SignatureMagic::EllipticCurveWithSha1 => (
-                Signature::EllipticCurveWithSha1(Cow::Owned(
-                    value
-                        .get(0x4..0x40)
-                        .ok_or(CertificateError::OutOfBounds)?
-                        .to_owned(),
-                )),
-                0x80,
-            ),
-            SignatureMagic::Rsa4096WithSha256 => (
-                Signature::Rsa4096WithSha256(Cow::Owned(
-                    value
-                        .get(0x4..0x204)
-                        .ok_or(CertificateError::OutOfBounds)?
-                        .to_owned(),
-                )),
-                0x240,
-            ),
-            SignatureMagic::Rsa2048WithSha256 => (
-                Signature::Rsa2048WithSha256(Cow::Owned(
-                    value
-                        .get(0x4..0x104)
-                        .ok_or(CertificateError::OutOfBounds)?
-                        .to_owned(),
-                )),
-                0x140,
-            ),
-            SignatureMagic::EcdsaWithSha256 => (
-                Signature::EcdsaWithSha256(Cow::Owned(
-                    value
-                        .get(0x4..0x40)
-                        .ok_or(CertificateError::OutOfBounds)?
-                        .to_owned(),
-                )),
-                0x80,
-            ),
+            SignatureMagic::Rsa4096WithSha1 => {
+                signature_magic_match_clause!(Rsa4096WithSha1, 0x204, 0x240)
+            }
+            SignatureMagic::Rsa2048WithSha1 => {
+                signature_magic_match_clause!(Rsa2048WithSha1, 0x104, 0x140)
+            }
+            SignatureMagic::EllipticCurveWithSha1 => {
+                signature_magic_match_clause!(EllipticCurveWithSha1, 0x40, 0x80)
+            }
+            SignatureMagic::Rsa4096WithSha256 => {
+                signature_magic_match_clause!(Rsa4096WithSha256, 0x204, 0x240)
+            }
+            SignatureMagic::Rsa2048WithSha256 => {
+                signature_magic_match_clause!(Rsa2048WithSha256, 0x104, 0x140)
+            }
+            SignatureMagic::EcdsaWithSha256 => {
+                signature_magic_match_clause!(EcdsaWithSha256, 0x40, 0x80)
+            }
+
             _ => return Err(CertificateError::UnsupportedSignatureType(signature_type)),
         };
 
@@ -269,27 +249,24 @@ impl TryFrom<&[u8]> for Certificate<'_> {
                 .expect(Self::SLICE_TO_ARRAY_PANIC_MESSAGE),
         );
 
+        macro_rules! key_magic_match_clause {
+            ($key_kind:ident, $key_limit:literal) => {
+                Key::$key_kind(Cow::Owned(
+                    value
+                        .get(offset + 0x88..offset + $key_limit)
+                        .ok_or(CertificateError::OutOfBounds)?
+                        .to_owned(),
+                ))
+            };
+        }
+
         let key = match KeyMagic::from_u32(key_type)
             .ok_or(CertificateError::UnsupportedKeyType(key_type))?
         {
-            KeyMagic::Rsa4096 => Key::Rsa4096(Cow::Owned(
-                value
-                    .get(offset + 0x88..offset + 0x28c)
-                    .ok_or(CertificateError::OutOfBounds)?
-                    .to_owned(),
-            )),
-            KeyMagic::Rsa2048 => Key::Rsa2048(Cow::Owned(
-                value
-                    .get(offset + 0x88..offset + 0x18c)
-                    .ok_or(CertificateError::OutOfBounds)?
-                    .to_owned(),
-            )),
-            KeyMagic::EllipticCurve => Key::EllipticCurve(Cow::Owned(
-                value
-                    .get(offset + 0x88..offset + 0xc4)
-                    .ok_or(CertificateError::OutOfBounds)?
-                    .to_owned(),
-            )),
+            KeyMagic::Rsa4096 => key_magic_match_clause!(Rsa4096, 0x28c),
+            KeyMagic::Rsa2048 => key_magic_match_clause!(Rsa2048, 0x18c),
+            KeyMagic::EllipticCurve => key_magic_match_clause!(EllipticCurve, 0xc4),
+
             _ => return Err(CertificateError::UnsupportedKeyType(key_type)),
         };
 
@@ -341,7 +318,7 @@ pub enum CertificateError {
     #[error("The provided byte certificate is not large enough")]
     OutOfBounds,
 
-    #[doc(hidden)]
+    #[non_exhaustive]
     #[error("You shouldn't be seeing this error. Please file an issue on the git repository")]
     NonExhaustive,
 }
@@ -358,7 +335,7 @@ pub enum SignatureMagic {
     Rsa2048WithSha256 = 0x010004,
     EcdsaWithSha256 = 0x010005,
 
-    #[doc(hidden)]
+    #[non_exhaustive]
     NonExhaustive,
 }
 
@@ -372,7 +349,7 @@ pub enum Signature<'a> {
     Rsa2048WithSha256(Cow<'a, [u8]>),
     EcdsaWithSha256(Cow<'a, [u8]>),
 
-    #[doc(hidden)]
+    #[non_exhaustive]
     NonExhaustive,
 }
 
@@ -419,7 +396,7 @@ pub enum KeyMagic {
     Rsa2048 = 0x1,
     EllipticCurve = 0x2,
 
-    #[doc(hidden)]
+    #[non_exhaustive]
     NonExhaustive,
 }
 
@@ -430,7 +407,7 @@ pub enum Key<'a> {
     Rsa2048(Cow<'a, [u8]>),
     EllipticCurve(Cow<'a, [u8]>),
 
-    #[doc(hidden)]
+    #[non_exhaustive]
     NonExhaustive,
 }
 

@@ -7,4 +7,4 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
-pub mod error_xml;
+pub mod error;

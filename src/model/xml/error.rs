@@ -495,4 +495,8 @@ pub enum ErrorCodeValue {
 
     #[error("The Nintendo Network service has ended")]
     NintendoNetworkClosed = 2999,
+
+    #[non_exhaustive]
+    #[error("You shouldn't be seeing this error. Please file an issue on the git repository")]
+    NonExhaustive,
 }

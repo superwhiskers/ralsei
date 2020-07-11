@@ -20,10 +20,10 @@ pub const DEFAULT_MII_CDN_HOST: &str = "mii-secure.account.nintendo.net";
 #[derive(
     IntoStaticStr, AsRefStr, EnumString, Display, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord,
 )]
-pub enum ServerKind<'a> {
+pub enum Kind<'a> {
     Account(&'a str),
     Mii(&'a str),
 
-    #[doc(hidden)]
+    #[non_exhaustive]
     NonExhaustive,
 }

@@ -14,7 +14,7 @@ use crate::model::{
     console::common::{
         Console, Environment, HeaderConstructionError, Kind as ConsoleKind, Region, Type,
     },
-    server::ServerKind,
+    server::Kind as ServerKind,
     title::id::TitleId,
 };
 

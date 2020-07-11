@@ -31,8 +31,8 @@ use crate::{
     model::{
         console::common::{Console, HeaderConstructionError, Kind as ConsoleKind},
         network::Nnid,
-        server::{ServerKind, DEFAULT_ACCOUNT_SERVER_HOST},
-        xml::error_xml,
+        server::{Kind as ServerKind, DEFAULT_ACCOUNT_SERVER_HOST},
+        xml::error as error_xml,
     },
 };
 
@@ -241,7 +241,7 @@ pub enum ClientError {
     #[error("The Nintendo Network API returned an unknown status code, `{0}`")]
     UnknownStatusCode(u16),
 
-    #[doc(hidden)]
+    #[non_exhaustive]
     #[error("You shouldn't be seeing this error. Please file an issue on the git repository")]
     NonExhaustive,
 }

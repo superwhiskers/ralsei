@@ -23,7 +23,6 @@
 #![deny(clippy::empty_enum)]
 #![deny(clippy::enum_glob_use)]
 #![deny(clippy::exit)]
-#![deny(clippy::expect_used)]
 #![deny(clippy::explicit_into_iter_loop)]
 #![deny(clippy::explicit_iter_loop)]
 #![deny(clippy::fallible_impl_from)]
@@ -31,6 +30,10 @@
 #![deny(clippy::large_digit_groups)]
 #![deny(clippy::wildcard_dependencies)]
 #![deny(clippy::wildcard_imports)]
+#![deny(clippy::unused_self)]
+#![deny(clippy::single_match_else)]
+#![deny(clippy::option_option)]
+#![deny(clippy::mut_mut)]
 #![feature(bool_to_option)]
 #![feature(const_fn)]
 

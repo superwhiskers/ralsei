@@ -25,7 +25,7 @@ use std::fmt;
 use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
 use thiserror::Error;
 
-use crate::model::server::ServerKind;
+use crate::model::server::Kind as ServerKind;
 
 /// An abstraction over the various console-specific data structures
 ///
@@ -79,7 +79,7 @@ pub enum HeaderConstructionError {
     #[error("`{0:?}` is not an implemented ServerKind")]
     UnimplementedServerKind(&'static str),
 
-    #[doc(hidden)]
+    #[non_exhaustive]
     #[error("You shouldn't be seeing this error. Please file an issue on the git repository")]
     NonExhaustive,
 }
@@ -108,7 +108,7 @@ pub enum Kind {
     N3ds,
     WiiU,
 
-    #[doc(hidden)]
+    #[non_exhaustive]
     NonExhaustive,
 }
 
