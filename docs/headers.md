@@ -128,13 +128,12 @@ them is as follows:
 | offset | size | description                   |
 | ------ | ---- | ----------------------------- |
 | 0x000  | 0x04 | the signature type (0x010005) |
-| 0x004  | 0x3c | the signature                 |
-| 0x040  | 0x40 | padding                       |
+| 0x004  | 0x7c | the signature (+ padding)     |
 | 0x080  | 0x40 | certificate issuer id         |
 | 0x0c0  | 0x04 | key type                      |
-| 0x0c4  | 0x44 | key id/device id              |
-| 0x108  | 0x3c | ecdsa public key              |
-| 0x144  | 0x3c | padding                       |
+| 0x0c4  | 0x40 | certificate name              |
+| 0x104  | 0x04 | key id                        |
+| 0x108  | 0x78 | ecdsa public key (+ padding)  |
 
 the signature type follows this format. in the certificate,
 it is prepended with a null byte (`0x00`)
@@ -154,12 +153,12 @@ console
 | 3ds     | retail              | `Nintendo CA - G3_NintendoCTR2prod` |
 |         | developer           | `Nintendo CA - G3_NintendoCTR2dev`  |
 
-the key id/device id section is one of the following
+the certificate name section is one of the following
 
-| console | key id/device format              |
-| ------- | --------------------------------- |
-| wiiu    | `NG<%08X>` + key id               |
-| 3ds     | `CT<%08X>-<%02X>` + unknown field |
+| console | certificate name format |
+| ------- | ----------------------- |
+| wiiu    | `NG<%08X>`              |
+| 3ds     | `CT<%08X>-<%02X>`       |
 
 in the 3ds format, the first parameter is your device id,
 and the second is either `00` for a retail certificate or

@@ -19,7 +19,10 @@ use std::{
     convert::{TryFrom, TryInto},
     string::FromUtf8Error,
 };
+use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
 use thiserror::Error;
+
+use crate::model::console::common::Kind as ConsoleKind;
 
 /// A Nintendo certificate container
 ///
@@ -28,9 +31,10 @@ use thiserror::Error;
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Certificate<'a> {
     pub signature: Signature<'a>,
-    pub issuer: Cow<'a, str>,
+    pub issuer: Issuer<'a>,
     pub key: Key<'a>,
-    pub identity: Cow<'a, [u8]>,
+    pub name: Name<'a>,
+    pub key_id: KeyId,
 }
 
 // TODO(superwhiskers): above, we should add in a wrapper struct for specific usages of this data,
@@ -46,198 +50,285 @@ impl<'a> Certificate<'a> {
     const SLICE_TO_ARRAY_PANIC_MESSAGE: &'static str =
         "unable to convert a slice into an array (this should be impossible)";
 
+    /// The message that appears when a panic occurs while trying to convert a signature to its
+    /// corresponding magic
+    const SIGNATURE_TO_SIGNATURE_MAGIC_PANIC_MESSAGE: &'static str =
+        "unable to convert a signature to its corresponding signature magic (this should be impossible)";
+
+    /// The message that appears when a panic occurs while trying to convert a key to its
+    /// corresponding magic
+    const KEY_TO_KEY_MAGIC_PANIC_MESSAGE: &'static str =
+        "unable to convert a key to its corresponding key magic (this should be impossible)";
+
     /// Creates a new [`Certificate`] from its portions
     ///
     /// [`Certificate`]: ./struct.Certificate.html
     pub const fn new(
         signature: Signature<'a>,
-        issuer: Cow<'a, str>,
+        issuer: Issuer<'a>,
         key: Key<'a>,
-        identity: Cow<'a, [u8]>,
+        name: Name<'a>,
+        key_id: KeyId,
     ) -> Self {
         Self {
             signature,
             issuer,
             key,
-            identity,
+            name,
+            key_id,
         }
     }
 
     /// Converts a [`Certificate`] into a byte vector
     ///
     /// [`Certificate`]: ./struct.Certificate.html
-    pub fn into_bytes(&self) -> Vec<u8> {
-        [
-            match &self.signature {
-                Signature::Rsa4096WithSha1(signature) => [
-                    &SignatureMagic::Rsa4096WithSha1
+    pub fn into_bytes(&self) -> Result<Vec<u8>, CertificateError> {
+        let mut certificate = Vec::new();
+
+        macro_rules! signature_match_clause {
+            ($signature_kind:ident, $signature_data:ident, $padding_size:literal) => {{
+                certificate.extend(
+                    &SignatureMagic::$signature_kind
                         .to_u32()
                         .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE)
                         .to_le_bytes(),
-                    signature.as_ref(),
-                    &[0; 0x3c],
-                ]
-                .concat(),
-                Signature::Rsa2048WithSha1(signature) => [
-                    &SignatureMagic::Rsa2048WithSha1
+                );
+                certificate.extend($signature_data.as_ref());
+                certificate.extend([0; $padding_size].as_ref());
+            }};
+        }
+        match &self.signature {
+            Signature::Rsa4096WithSha1(signature) => {
+                signature_match_clause!(Rsa4096WithSha1, signature, 0x3c)
+            }
+            Signature::Rsa2048WithSha1(signature) => {
+                signature_match_clause!(Rsa2048WithSha1, signature, 0x3c)
+            }
+            Signature::EllipticCurveWithSha1(signature) => {
+                signature_match_clause!(EllipticCurveWithSha1, signature, 0x40)
+            }
+            Signature::Rsa4096WithSha256(signature) => {
+                signature_match_clause!(Rsa4096WithSha256, signature, 0x3c)
+            }
+            Signature::Rsa2048WithSha256(signature) => {
+                signature_match_clause!(Rsa2048WithSha256, signature, 0x3c)
+            }
+            Signature::EcdsaWithSha256(signature) => {
+                signature_match_clause!(EcdsaWithSha256, signature, 0x40)
+            }
+
+            _ => {
+                return Err(CertificateError::UnsupportedSignatureType(
+                    self.signature
+                        .to_signature_magic()
+                        .expect(Self::SIGNATURE_TO_SIGNATURE_MAGIC_PANIC_MESSAGE)
+                        .to_u32()
+                        .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE),
+                ))
+            }
+        }
+
+        {
+            let len = certificate.len();
+            certificate.extend(self.issuer.0.as_ref().bytes());
+            certificate.resize(len + 0x40, 0);
+        }
+
+        macro_rules! key_match_clause {
+            ($key_kind:ident, $key_data:ident, $padding_size:literal) => {{
+                certificate.extend(
+                    &KeyMagic::$key_kind
                         .to_u32()
                         .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE)
                         .to_le_bytes(),
-                    signature.as_ref(),
-                    &[0; 0x3c],
-                ]
-                .concat(),
-                Signature::EllipticCurveWithSha1(signature) => [
-                    &SignatureMagic::EllipticCurveWithSha1
+                );
+                {
+                    let len = certificate.len();
+                    certificate.extend(self.name.0.as_ref().bytes());
+                    certificate.resize(len + 0x40, 0);
+                }
+                certificate.extend(&self.key_id.0.to_le_bytes());
+                certificate.extend($key_data.as_ref());
+                certificate.extend([0; $padding_size].as_ref());
+            }};
+        }
+
+        match &self.key {
+            Key::Rsa4096(key) => key_match_clause!(Rsa4096, key, 0x34),
+            Key::Rsa2048(key) => key_match_clause!(Rsa2048, key, 0x34),
+            Key::EllipticCurve(key) => key_match_clause!(EllipticCurve, key, 0x3c),
+
+            _ => {
+                return Err(CertificateError::UnsupportedKeyType(
+                    self.key
+                        .to_key_magic()
+                        .expect(Self::KEY_TO_KEY_MAGIC_PANIC_MESSAGE)
                         .to_u32()
-                        .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE)
-                        .to_le_bytes(),
-                    signature.as_ref(),
-                    &[0; 0x40],
-                ]
-                .concat(),
-                Signature::Rsa4096WithSha256(signature) => [
-                    &SignatureMagic::Rsa4096WithSha256
-                        .to_u32()
-                        .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE)
-                        .to_le_bytes(),
-                    signature.as_ref(),
-                    &[0; 0x3c],
-                ]
-                .concat(),
-                Signature::Rsa2048WithSha256(signature) => [
-                    &SignatureMagic::Rsa2048WithSha256
-                        .to_u32()
-                        .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE)
-                        .to_le_bytes(),
-                    signature.as_ref(),
-                    &[0; 0x3c],
-                ]
-                .concat(),
-                Signature::EcdsaWithSha256(signature) => [
-                    &SignatureMagic::EcdsaWithSha256
-                        .to_u32()
-                        .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE)
-                        .to_le_bytes(),
-                    signature.as_ref(),
-                    &[0; 0x40],
-                ]
-                .concat(),
-            },
-            self.issuer.as_ref().into(),
-            match &self.key {
-                Key::Rsa4096(key) => [
-                    &KeyMagic::Rsa4096
-                        .to_u32()
-                        .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE)
-                        .to_le_bytes(),
-                    self.identity.as_ref(),
-                    key.as_ref(),
-                    &[0; 0x34],
-                ]
-                .concat(),
-                Key::Rsa2048(key) => [
-                    &KeyMagic::Rsa2048
-                        .to_u32()
-                        .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE)
-                        .to_le_bytes(),
-                    self.identity.as_ref(),
-                    key.as_ref(),
-                    &[0; 0x34],
-                ]
-                .concat(),
-                Key::EllipticCurve(key) => [
-                    &KeyMagic::EllipticCurve
-                        .to_u32()
-                        .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE)
-                        .to_le_bytes(),
-                    self.identity.as_ref(),
-                    key.as_ref(),
-                    &[0; 0x3c],
-                ]
-                .concat(),
-            },
-        ]
-        .concat()
+                        .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE),
+                ))
+            }
+        }
+
+        Ok(certificate)
     }
 }
 
 impl TryFrom<&[u8]> for Certificate<'_> {
-    type Error = CertificateParseError;
+    type Error = CertificateError;
 
     /// Creates a new [`Certificate`] from a byte slice
     ///
     /// [`Certificate`]: ./struct.Certificate.html
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
         let signature_type = u32::from_le_bytes(
-            value[..0x4]
+            value
+                .get(..0x4)
+                .ok_or(CertificateError::OutOfBounds)?
                 .try_into()
                 .expect(Self::SLICE_TO_ARRAY_PANIC_MESSAGE),
         );
 
-        let (signature, offset) = match SignatureMagic::from_u32(signature_type).ok_or(
-            CertificateParseError::UnsupportedSignatureType(signature_type),
-        )? {
+        let (signature, offset) = match SignatureMagic::from_u32(signature_type)
+            .ok_or(CertificateError::UnsupportedSignatureType(signature_type))?
+        {
             SignatureMagic::Rsa4096WithSha1 => (
-                Signature::Rsa4096WithSha1(Cow::Owned(value[0x4..0x204].to_owned())),
+                Signature::Rsa4096WithSha1(Cow::Owned(
+                    value
+                        .get(0x4..0x204)
+                        .ok_or(CertificateError::OutOfBounds)?
+                        .to_owned(),
+                )),
                 0x240,
             ),
             SignatureMagic::Rsa2048WithSha1 => (
-                Signature::Rsa2048WithSha1(Cow::Owned(value[0x4..0x104].to_owned())),
+                Signature::Rsa2048WithSha1(Cow::Owned(
+                    value
+                        .get(0x4..0x104)
+                        .ok_or(CertificateError::OutOfBounds)?
+                        .to_owned(),
+                )),
                 0x140,
             ),
             SignatureMagic::EllipticCurveWithSha1 => (
-                Signature::EllipticCurveWithSha1(Cow::Owned(value[0x4..0x40].to_owned())),
+                Signature::EllipticCurveWithSha1(Cow::Owned(
+                    value
+                        .get(0x4..0x40)
+                        .ok_or(CertificateError::OutOfBounds)?
+                        .to_owned(),
+                )),
                 0x80,
             ),
             SignatureMagic::Rsa4096WithSha256 => (
-                Signature::Rsa4096WithSha256(Cow::Owned(value[0x4..0x204].to_owned())),
+                Signature::Rsa4096WithSha256(Cow::Owned(
+                    value
+                        .get(0x4..0x204)
+                        .ok_or(CertificateError::OutOfBounds)?
+                        .to_owned(),
+                )),
                 0x240,
             ),
             SignatureMagic::Rsa2048WithSha256 => (
-                Signature::Rsa2048WithSha256(Cow::Owned(value[0x4..0x104].to_owned())),
+                Signature::Rsa2048WithSha256(Cow::Owned(
+                    value
+                        .get(0x4..0x104)
+                        .ok_or(CertificateError::OutOfBounds)?
+                        .to_owned(),
+                )),
                 0x140,
             ),
             SignatureMagic::EcdsaWithSha256 => (
-                Signature::EcdsaWithSha256(Cow::Owned(value[0x4..0x40].to_owned())),
+                Signature::EcdsaWithSha256(Cow::Owned(
+                    value
+                        .get(0x4..0x40)
+                        .ok_or(CertificateError::OutOfBounds)?
+                        .to_owned(),
+                )),
                 0x80,
             ),
+            _ => return Err(CertificateError::UnsupportedSignatureType(signature_type)),
         };
-        let issuer = Cow::Owned(String::from_utf8(value[offset..offset + 0x40].to_owned())?);
+
+        let mut issuer = value
+            .get(offset..offset + 0x400)
+            .ok_or(CertificateError::OutOfBounds)?
+            .to_owned();
+        while let Some(&value) = issuer.last() {
+            if value == 0 {
+                issuer.pop();
+            } else {
+                break;
+            }
+        }
+        let issuer = Issuer(Cow::Owned(String::from_utf8(issuer)?));
+
         let key_type = u32::from_le_bytes(
-            value[offset + 0x40..offset + 0x44]
+            value
+                .get(offset + 0x40..offset + 0x44)
+                .ok_or(CertificateError::OutOfBounds)?
                 .try_into()
                 .expect(Self::SLICE_TO_ARRAY_PANIC_MESSAGE),
         );
+
         let key = match KeyMagic::from_u32(key_type)
-            .ok_or(CertificateParseError::UnsupportedKeyType(key_type))?
+            .ok_or(CertificateError::UnsupportedKeyType(key_type))?
         {
-            KeyMagic::Rsa4096 => {
-                Key::Rsa4096(Cow::Owned(value[offset + 0x88..offset + 0x28c].to_owned()))
-            }
-            KeyMagic::Rsa2048 => {
-                Key::Rsa2048(Cow::Owned(value[offset + 0x88..offset + 0x18c].to_owned()))
-            }
-            KeyMagic::EllipticCurve => {
-                Key::EllipticCurve(Cow::Owned(value[offset + 0x88..offset + 0xc4].to_owned()))
-            }
+            KeyMagic::Rsa4096 => Key::Rsa4096(Cow::Owned(
+                value
+                    .get(offset + 0x88..offset + 0x28c)
+                    .ok_or(CertificateError::OutOfBounds)?
+                    .to_owned(),
+            )),
+            KeyMagic::Rsa2048 => Key::Rsa2048(Cow::Owned(
+                value
+                    .get(offset + 0x88..offset + 0x18c)
+                    .ok_or(CertificateError::OutOfBounds)?
+                    .to_owned(),
+            )),
+            KeyMagic::EllipticCurve => Key::EllipticCurve(Cow::Owned(
+                value
+                    .get(offset + 0x88..offset + 0xc4)
+                    .ok_or(CertificateError::OutOfBounds)?
+                    .to_owned(),
+            )),
+            _ => return Err(CertificateError::UnsupportedKeyType(key_type)),
         };
-        let identity = Cow::Owned(value[offset + 0x44..offset + 0x88].to_owned());
+
+        let mut name = value
+            .get(offset + 0x44..offset + 0x84)
+            .ok_or(CertificateError::OutOfBounds)?
+            .to_owned();
+        while let Some(&value) = name.last() {
+            if value == 0 {
+                name.pop();
+            } else {
+                break;
+            }
+        }
+        let name = Name(Cow::Owned(String::from_utf8(name)?));
+
+        let key_id = KeyId(u32::from_le_bytes(
+            value
+                .get(offset + 0x84..offset + 0x88)
+                .ok_or(CertificateError::OutOfBounds)?
+                .try_into()
+                .expect(Self::SLICE_TO_ARRAY_PANIC_MESSAGE),
+        ));
 
         Ok(Self {
             signature,
             issuer,
             key,
-            identity,
+            name,
+            key_id,
         })
     }
 }
 
-/// A list of all possible errors encountered while parsing a [`Certificate`] from a byte slice
+/// A list of all possible errors encountered while working with a [`Certificate`]
 ///
 /// [`Certificate`]: ./struct.Certificate.html
 #[derive(Error, Debug)]
-pub enum CertificateParseError {
+pub enum CertificateError {
     #[error("The UTF-8 data inside of the Certificate is invalid")]
     FromUtf8Error(#[from] FromUtf8Error),
 
@@ -246,6 +337,13 @@ pub enum CertificateParseError {
 
     #[error("`{0}` is an unsupported key type")]
     UnsupportedKeyType(u32),
+
+    #[error("The provided byte certificate is not large enough")]
+    OutOfBounds,
+
+    #[doc(hidden)]
+    #[error("You shouldn't be seeing this error. Please file an issue on the git repository")]
+    NonExhaustive,
 }
 
 /// An enumeration over the possible magic numbers representing a kind of [`Signature`]
@@ -259,6 +357,9 @@ pub enum SignatureMagic {
     Rsa4096WithSha256 = 0x010003,
     Rsa2048WithSha256 = 0x010004,
     EcdsaWithSha256 = 0x010005,
+
+    #[doc(hidden)]
+    NonExhaustive,
 }
 
 /// An enumeration over all possible signature kinds, containing the internal signature data
@@ -270,7 +371,44 @@ pub enum Signature<'a> {
     Rsa4096WithSha256(Cow<'a, [u8]>),
     Rsa2048WithSha256(Cow<'a, [u8]>),
     EcdsaWithSha256(Cow<'a, [u8]>),
+
+    #[doc(hidden)]
+    NonExhaustive,
 }
+
+impl Signature<'_> {
+    /// Converts a [`Signature`] into a [`SignatureMagic`]
+    ///
+    /// [`Signature`]: ./enum.Signature.html
+    /// [`SignatureMagic`]: ./enum.SignatureMagic.html
+    pub fn to_signature_magic(&self) -> Option<SignatureMagic> {
+        match &self {
+            Self::Rsa4096WithSha1(_) => Some(SignatureMagic::Rsa4096WithSha1),
+            Self::Rsa2048WithSha1(_) => Some(SignatureMagic::Rsa2048WithSha1),
+            Self::EllipticCurveWithSha1(_) => Some(SignatureMagic::EllipticCurveWithSha1),
+            Self::Rsa4096WithSha256(_) => Some(SignatureMagic::Rsa4096WithSha256),
+            Self::Rsa2048WithSha256(_) => Some(SignatureMagic::Rsa2048WithSha256),
+            Self::EcdsaWithSha256(_) => Some(SignatureMagic::EcdsaWithSha256),
+
+            _ => None,
+        }
+    }
+}
+
+/// A newtype that defines various operations on a [`Certificate`]'s issuer section
+///
+/// [`Certificate`]: ./struct.Certificate.html
+#[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+pub struct Issuer<'a>(pub Cow<'a, str>);
+
+/*
+impl<'a> Issuer<'a> {
+    pub fn known_issuer() -> Option<KnownIssuer> {}
+}
+
+/// An enumeration over known issuer ids
+pub enum KnownIssuer {}
+*/
 
 /// An enumeration over all possible magic numbers representing a kind of [`Key`]
 ///
@@ -280,6 +418,9 @@ pub enum KeyMagic {
     Rsa4096 = 0x0,
     Rsa2048 = 0x1,
     EllipticCurve = 0x2,
+
+    #[doc(hidden)]
+    NonExhaustive,
 }
 
 /// An enumeration over all possible key kinds, containing the internal key data
@@ -288,4 +429,35 @@ pub enum Key<'a> {
     Rsa4096(Cow<'a, [u8]>),
     Rsa2048(Cow<'a, [u8]>),
     EllipticCurve(Cow<'a, [u8]>),
+
+    #[doc(hidden)]
+    NonExhaustive,
 }
+
+impl Key<'_> {
+    /// Converts a [`Key`] into a [`KeyMagic`]
+    ///
+    /// [`Key`]: ./enum.Key.html
+    /// [`KeyMagic`]: ./enum.KeyMagic.html
+    pub fn to_key_magic(&self) -> Option<KeyMagic> {
+        match &self {
+            Self::Rsa4096(_) => Some(KeyMagic::Rsa4096),
+            Self::Rsa2048(_) => Some(KeyMagic::Rsa2048),
+            Self::EllipticCurve(_) => Some(KeyMagic::EllipticCurve),
+
+            _ => None,
+        }
+    }
+}
+
+/// A newtype that defines various operations on a [`Certificate`]'s name section
+///
+/// [`Certificate`]: ./struct.Certificate.html
+#[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+pub struct Name<'a>(pub Cow<'a, str>);
+
+/// A newtype that defines various operations on a [`Certificate`]'s key id section
+///
+/// [`Certificate`]: ./struct.Certificate.html
+#[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+pub struct KeyId(pub u32);
