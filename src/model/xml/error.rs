@@ -212,6 +212,7 @@ impl<'de> Deserialize<'de> for ErrorCode {
 }
 
 /// A Nintendo Network account server error code
+#[non_exhaustive]
 #[derive(
     thiserror::Error, FromPrimitive, ToPrimitive, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord,
 )]
@@ -495,8 +496,4 @@ pub enum ErrorCodeValue {
 
     #[error("The Nintendo Network service has ended")]
     NintendoNetworkClosed = 2999,
-
-    #[non_exhaustive]
-    #[error("You shouldn't be seeing this error. Please file an issue on the git repository")]
-    NonExhaustive,
 }

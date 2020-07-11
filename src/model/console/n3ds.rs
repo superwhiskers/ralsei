@@ -58,6 +58,7 @@ pub enum Model {
 ///
 /// any fields for which None is provided will be
 /// omitted in the header output.
+#[non_exhaustive]
 #[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Console3ds<'a> {
     /// inherent: `X-Nintendo-Platform-ID` = 0

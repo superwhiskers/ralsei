@@ -304,6 +304,7 @@ impl TryFrom<&[u8]> for Certificate<'_> {
 /// A list of all possible errors encountered while working with a [`Certificate`]
 ///
 /// [`Certificate`]: ./struct.Certificate.html
+#[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum CertificateError {
     #[error("The UTF-8 data inside of the Certificate is invalid")]
@@ -317,15 +318,12 @@ pub enum CertificateError {
 
     #[error("The provided byte certificate is not large enough")]
     OutOfBounds,
-
-    #[non_exhaustive]
-    #[error("You shouldn't be seeing this error. Please file an issue on the git repository")]
-    NonExhaustive,
 }
 
 /// An enumeration over the possible magic numbers representing a kind of [`Signature`]
 ///
 /// [`Signature`]: ./enum.Signature.html
+#[non_exhaustive]
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum SignatureMagic {
     Rsa4096WithSha1 = 0x010000,
@@ -334,12 +332,10 @@ pub enum SignatureMagic {
     Rsa4096WithSha256 = 0x010003,
     Rsa2048WithSha256 = 0x010004,
     EcdsaWithSha256 = 0x010005,
-
-    #[non_exhaustive]
-    NonExhaustive,
 }
 
 /// An enumeration over all possible signature kinds, containing the internal signature data
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum Signature<'a> {
     Rsa4096WithSha1(Cow<'a, [u8]>),
@@ -348,9 +344,6 @@ pub enum Signature<'a> {
     Rsa4096WithSha256(Cow<'a, [u8]>),
     Rsa2048WithSha256(Cow<'a, [u8]>),
     EcdsaWithSha256(Cow<'a, [u8]>),
-
-    #[non_exhaustive]
-    NonExhaustive,
 }
 
 impl Signature<'_> {
@@ -390,25 +383,21 @@ pub enum KnownIssuer {}
 /// An enumeration over all possible magic numbers representing a kind of [`Key`]
 ///
 /// [`Key`]: ./enum.Key.html
+#[non_exhaustive]
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum KeyMagic {
     Rsa4096 = 0x0,
     Rsa2048 = 0x1,
     EllipticCurve = 0x2,
-
-    #[non_exhaustive]
-    NonExhaustive,
 }
 
 /// An enumeration over all possible key kinds, containing the internal key data
+#[non_exhaustive]
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum Key<'a> {
     Rsa4096(Cow<'a, [u8]>),
     Rsa2048(Cow<'a, [u8]>),
     EllipticCurve(Cow<'a, [u8]>),
-
-    #[non_exhaustive]
-    NonExhaustive,
 }
 
 impl Key<'_> {

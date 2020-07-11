@@ -67,6 +67,7 @@ pub trait Console<'a> {
 /// It is used by all implementors of [`Console`].
 ///
 /// [`Console`]: ./trait.Console.html
+#[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum HeaderConstructionError {
     /// An error returned when one of your console's details is invalid in the context of a header
@@ -78,10 +79,6 @@ pub enum HeaderConstructionError {
     /// headers to be recieved from the console that you intend to mimic.
     #[error("`{0:?}` is not an implemented ServerKind")]
     UnimplementedServerKind(&'static str),
-
-    #[non_exhaustive]
-    #[error("You shouldn't be seeing this error. Please file an issue on the git repository")]
-    NonExhaustive,
 }
 
 /// A list of Nintendo consoles that can implement the [`Console`] trait
@@ -90,6 +87,7 @@ pub enum HeaderConstructionError {
 /// currently no plans to provide an implementation for one.
 ///
 /// [`Console`]: ./trait.Console.html
+#[non_exhaustive]
 #[derive(
     IntoStaticStr,
     AsRefStr,
@@ -107,9 +105,6 @@ pub enum HeaderConstructionError {
 pub enum Kind {
     N3ds,
     WiiU,
-
-    #[non_exhaustive]
-    NonExhaustive,
 }
 
 /// Enumeration of possible (3ds/WiiU) console environments

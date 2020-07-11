@@ -199,6 +199,7 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
 /// A list of possible errors encountered while using the [`Client`]
 ///
 /// [`Client`]: ./struct.Client.html
+#[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum ClientError {
     /// An error encountered when the provided [`Kind`] of console is not supported
@@ -240,8 +241,4 @@ pub enum ClientError {
     /// The Nintendo Network API returned an unknown status code
     #[error("The Nintendo Network API returned an unknown status code, `{0}`")]
     UnknownStatusCode(u16),
-
-    #[non_exhaustive]
-    #[error("You shouldn't be seeing this error. Please file an issue on the git repository")]
-    NonExhaustive,
 }
