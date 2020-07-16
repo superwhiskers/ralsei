@@ -7,6 +7,7 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
+use base64;
 use http::header::{self, HeaderMap, HeaderValue};
 use isocountry::CountryCode;
 use isolanguage_1::LanguageCode;
@@ -279,7 +280,9 @@ impl<'a> Console<'a> for Console3ds<'_> {
                 if let Some(device_certificate) = &self.device_certificate {
                     let _ = h.append(
                         "X-Nintendo-Device-Cert",
-                        HeaderValue::from_bytes(&device_certificate.to_bytes()?)?,
+                        HeaderValue::from_str(
+                            base64::encode(device_certificate.to_bytes()?).as_ref(),
+                        )?,
                     );
                 }
 

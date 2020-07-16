@@ -7,15 +7,17 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
+use base64;
 use clap::clap_app;
 use isocountry::CountryCode;
 use isolanguage_1::LanguageCode;
 use parking_lot::RwLock;
-use std::{borrow::Cow, sync::Arc};
+use std::{borrow::Cow, convert::TryFrom, sync::Arc};
 
 use ralsei::{
     client::account::Client,
     model::{
+        certificate::Certificate,
         console::{
             common::{
                 Environment as DeviceEnvironment, Region as DeviceRegion, Type as DeviceType,
@@ -38,26 +40,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             (about: "checks if a user exists")
             (@arg NNID: +required "the nnid to check for")
         )
+        (@subcommand certificate =>
+            (about: "parse a b64-encoded certificate and display as much information about it as possible")
+            (@arg CERTIFICATE: +required "the certificate to parse, in b64 format")
+        )
     ).get_matches();
 
-    let console = Arc::new(RwLock::new(Console3ds {
-        device_type: Some(DeviceType::Retail),
-        device_id: Some(1),               // dummy
-        serial: Some(Cow::Borrowed("1")), // dummy
-        system_version: Some(Cow::Borrowed("02D0")),
-        region: Some(DeviceRegion::UnitedStates),
-        country: Some(CountryCode::USA),
-        client_id: Some(Cow::Borrowed("ea25c66c26b403376b4c5ed94ab9cdea")),
-        client_secret: Some(Cow::Borrowed("d137be62cb6a2b831cad8c013b92fb55")),
-        fpd_version: Some(0),
-        environment: Some(DeviceEnvironment::L(1)),
-        title_id: Some(TitleId(0x000400100002C000)),
-        title_version: Some(TitleVersion(0003)),
-        device_certificate: None, // dummy
-        language: Some(LanguageCode::En),
-        api_version: Some(1),
-        device_model: Some(N3dsModel::Nintendo3ds),
-    }));
+    let console = Arc::new(RwLock::new(Console3ds::new(|b| {
+        b.device_type(DeviceType::Retail)
+            .device_id(1) // dummy
+            .serial(Cow::Borrowed("1")) // dummy
+            .system_version(Cow::Borrowed("02D0"))
+            .region(DeviceRegion::UnitedStates)
+            .country(CountryCode::USA)
+            .client_id(Cow::Borrowed("ea25c66c26b403376b4c5ed94ab9cdea"))
+            .client_secret(Cow::Borrowed("d137be62cb6a2b831cad8c013b92fb55"))
+            .fpd_version(0)
+            .environment(DeviceEnvironment::L(1))
+            .title_id_and_unique_id(TitleId(0x000400100002C000))
+            .title_version(TitleVersion(0003))
+            .language(LanguageCode::En)
+            .api_version(1)
+            .device_model(N3dsModel::Nintendo3ds)
+    })));
 
     let client = Client::new(None, console.clone(), None, None)?;
 
@@ -66,10 +71,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "does the user exist: {}",
             client
                 .does_user_exist(Nnid(Cow::Borrowed(
-                    arguments.value_of("NNID").unwrap_or("placeholder")
+                    arguments
+                        .value_of("NNID")
+                        .expect("no nnid was provided (this should never happen)")
                 )))
                 .await?
         ),
+        ("certificate", Some(arguments)) => {
+            let cert = Certificate::try_from(
+                base64::decode(
+                    arguments
+                        .value_of("CERTIFICATE")
+                        .expect("no certificate was provided (this should never happen)"),
+                )?
+                .as_ref(),
+            )?;
+            println!("certificate: {:?}", cert);
+            println!("device id: {:?}", cert.name.device_id());
+            println!("console: {:?}", cert.name.console_kind());
+            println!(
+                "does issuer match a known one?: {:?}",
+                cert.issuer.known_issuer()
+            );
+            println!("re-encoded: {}", base64::encode(cert.to_bytes()?));
+        }
         _ => println!("you shouldn't have done that"),
     }
     Ok(())

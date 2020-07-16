@@ -32,6 +32,7 @@ strum = "^0.18"
 strum_macros = "^0.18"
 bitflags = "^1.0"
 http = "^0.2"
+base64 = "^0.12"
 
 # dependencies needed by client
 tokio = { version = "^0.2", features = ["full"], optional = true }

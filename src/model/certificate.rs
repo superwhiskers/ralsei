@@ -86,7 +86,7 @@ impl<'a> Certificate<'a> {
                     &SignatureMagic::$signature_kind
                         .to_u32()
                         .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE)
-                        .to_le_bytes(),
+                        .to_be_bytes(),
                 );
                 certificate.extend($signature_data.as_ref());
                 certificate.extend([0; $padding_size].as_ref());
@@ -136,14 +136,14 @@ impl<'a> Certificate<'a> {
                     &KeyMagic::$key_kind
                         .to_u32()
                         .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE)
-                        .to_le_bytes(),
+                        .to_be_bytes(),
                 );
                 {
                     let len = certificate.len();
                     certificate.extend(self.name.0.as_ref().bytes());
                     certificate.resize(len + 0x40, 0);
                 }
-                certificate.extend(&self.key_id.0.to_le_bytes());
+                certificate.extend(&self.key_id.0.to_be_bytes());
                 certificate.extend($key_data.as_ref());
                 certificate.extend([0; $padding_size].as_ref());
             }};
@@ -176,7 +176,7 @@ impl TryFrom<&[u8]> for Certificate<'_> {
     ///
     /// [`Certificate`]: ./struct.Certificate.html
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        let signature_type = u32::from_le_bytes(
+        let signature_type = u32::from_be_bytes(
             value
                 .get(..0x4)
                 .ok_or(CertificateError::OutOfBounds)?
@@ -224,7 +224,7 @@ impl TryFrom<&[u8]> for Certificate<'_> {
         };
 
         let mut issuer = value
-            .get(offset..offset + 0x400)
+            .get(offset..offset + 0x40)
             .ok_or(CertificateError::OutOfBounds)?
             .to_owned();
         while let Some(&value) = issuer.last() {
@@ -236,7 +236,7 @@ impl TryFrom<&[u8]> for Certificate<'_> {
         }
         let issuer = Issuer(Cow::Owned(String::from_utf8(issuer)?));
 
-        let key_type = u32::from_le_bytes(
+        let key_type = u32::from_be_bytes(
             value
                 .get(offset + 0x40..offset + 0x44)
                 .ok_or(CertificateError::OutOfBounds)?
@@ -278,7 +278,7 @@ impl TryFrom<&[u8]> for Certificate<'_> {
         }
         let name = Name(Cow::Owned(String::from_utf8(name)?));
 
-        let key_id = KeyId(u32::from_le_bytes(
+        let key_id = KeyId(u32::from_be_bytes(
             value
                 .get(offset + 0x84..offset + 0x88)
                 .ok_or(CertificateError::OutOfBounds)?
