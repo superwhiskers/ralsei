@@ -153,6 +153,10 @@ console
 | 3ds     | retail              | `Nintendo CA - G3_NintendoCTR2prod` |
 |         | developer           | `Nintendo CA - G3_NintendoCTR2dev`  |
 
+in the wii u issuer format, the two placeholder values
+appear to consistently contain the values `00000003`
+and `00000012`, respectively
+
 the certificate name section is one of the following
 
 | console | certificate name format |

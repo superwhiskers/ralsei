@@ -25,7 +25,7 @@ use std::fmt;
 use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
 use thiserror::Error;
 
-use crate::model::server::Kind as ServerKind;
+use crate::model::{certificate::CertificateError, server::Kind as ServerKind};
 
 /// An abstraction over the various console-specific data structures
 ///
@@ -74,6 +74,12 @@ pub enum HeaderConstructionError {
     /// value.
     #[error("One of your console's details is an invalid header value")]
     InvalidHeaderValue(#[from] InvalidHeaderValue),
+
+    /// An error returned when a [`Certificate`] could not be converted to or from bytes
+    ///
+    /// [`Certificate`]: ../../certificate/struct.Certificate.html
+    #[error("A Certificate could not be converted to or from bytes")]
+    CertificateError(#[from] CertificateError),
 
     /// An error returned when the server that you are requesting headers from has no corresponding
     /// headers to be recieved from the console that you intend to mimic.

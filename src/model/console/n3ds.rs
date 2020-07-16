@@ -14,6 +14,7 @@ use std::borrow::Cow;
 use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
 
 use crate::model::{
+    certificate::Certificate,
     console::common::{
         Console, Environment, HeaderConstructionError, Kind as ConsoleKind, Region, Type,
     },
@@ -54,6 +55,60 @@ pub enum Model {
     NintendoNew2dsXL,
 }
 
+/// the builder structure used to ease building Console3ds types
+#[derive(Debug, Default)]
+pub struct Console3dsBuilder<'a> {
+    console: Console3ds<'a>,
+}
+
+macro_rules! builder_set {
+    ($field:ident, $type:ty) => {
+        pub fn $field(&mut self, $field: $type) -> &mut Self {
+            self.console.$field = Some($field);
+            self
+        }
+    };
+}
+
+impl<'a> Console3dsBuilder<'a> {
+    fn build(self) -> Console3ds<'a> {
+        self.console
+    }
+
+    pub fn title_id_and_unique_id(&mut self, title_id: TitleId) -> &mut Self {
+        self.console.unique_id = Some(title_id.unique_id());
+        self.console.title_id = Some(title_id);
+        self
+    }
+
+    pub fn device_certificate_and_device_id(
+        &mut self,
+        device_certificate: Certificate<'a>,
+    ) -> &mut Self {
+        self.console.device_id = device_certificate.name.device_id();
+        self.console.device_certificate = Some(device_certificate);
+        self
+    }
+
+    builder_set!(device_type, Type);
+    builder_set!(device_id, u32);
+    builder_set!(serial, Cow<'a, str>);
+    builder_set!(system_version, Cow<'a, str>);
+    builder_set!(region, Region);
+    builder_set!(country, CountryCode);
+    builder_set!(client_id, Cow<'a, str>);
+    builder_set!(client_secret, Cow<'a, str>);
+    builder_set!(fpd_version, u16);
+    builder_set!(environment, Environment);
+    builder_set!(title_id, TitleId);
+    builder_set!(unique_id, UniqueId);
+    builder_set!(title_version, TitleVersion);
+    builder_set!(device_certificate, Certificate<'a>);
+    builder_set!(language, LanguageCode);
+    builder_set!(api_version, u16);
+    builder_set!(device_model, Model);
+}
+
 /// information required to emulate a 3ds.
 ///
 /// any fields for which None is provided will be
@@ -67,7 +122,7 @@ pub struct Console3ds<'a> {
     pub device_type: Option<Type>,
 
     /// provides `X-Nintendo-Device-ID`
-    pub device_id: Option<u64>,
+    pub device_id: Option<u32>,
 
     /// provides `X-Nintendo-Serial-Number`
     pub serial: Option<Cow<'a, str>>,
@@ -104,7 +159,7 @@ pub struct Console3ds<'a> {
 
     /// provides `X-Nintendo-Device-Cert`
     /// guaranteed to be 384 bytes long
-    pub device_certificate: Option<Vec<u8>>,
+    pub device_certificate: Option<Certificate<'a>>,
 
     /** unsure */
 
@@ -118,6 +173,17 @@ pub struct Console3ds<'a> {
 
     /// provides `X-Nintendo-Device-Model`
     pub device_model: Option<Model>,
+}
+
+impl<'a> Console3ds<'a> {
+    pub fn new<F>(f: F) -> Self
+    where
+        F: for<'b> FnOnce(&'b mut Console3dsBuilder<'a>) -> &'b mut Console3dsBuilder<'a>,
+    {
+        let mut builder = Console3dsBuilder::default();
+        f(&mut builder);
+        builder.build()
+    }
 }
 
 impl<'a> Console<'a> for Console3ds<'_> {
@@ -136,8 +202,6 @@ impl<'a> Console<'a> for Console3ds<'_> {
                 // unsure if this is necessary
                 // let _ = h.append(header::USER_AGENT, "".parse().unwrap());
 
-                // while i know that this will not fail, i add a proper error check
-                // anyway
                 let _ = h.append("X-Nintendo-Platform-ID", "0".parse()?);
 
                 if let Some(device_type) = self.device_type {
@@ -215,7 +279,7 @@ impl<'a> Console<'a> for Console3ds<'_> {
                 if let Some(device_certificate) = &self.device_certificate {
                     let _ = h.append(
                         "X-Nintendo-Device-Cert",
-                        HeaderValue::from_bytes(&device_certificate)?,
+                        HeaderValue::from_bytes(&device_certificate.to_bytes()?)?,
                     );
                 }
 

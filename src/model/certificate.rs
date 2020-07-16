@@ -17,6 +17,7 @@ use num_traits::cast::{FromPrimitive, ToPrimitive};
 use std::{
     borrow::Cow,
     convert::{TryFrom, TryInto},
+    str::FromStr,
     string::FromUtf8Error,
 };
 use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
@@ -25,9 +26,6 @@ use thiserror::Error;
 use crate::model::console::common::Kind as ConsoleKind;
 
 /// A Nintendo certificate container
-///
-/// There is absolutely a better way to do this. This current method of containerization is
-/// absolute trash and should not be used anywhere.
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Certificate<'a> {
     pub signature: Signature<'a>,
@@ -36,9 +34,6 @@ pub struct Certificate<'a> {
     pub name: Name<'a>,
     pub key_id: KeyId,
 }
-
-// TODO(superwhiskers): above, we should add in a wrapper struct for specific usages of this data,
-// e.g. ctcert usage
 
 impl<'a> Certificate<'a> {
     /// The message that appears when a panic occurs while trying to convert a c-style enum to a
@@ -371,14 +366,36 @@ impl Signature<'_> {
 #[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Issuer<'a>(pub Cow<'a, str>);
 
-/*
 impl<'a> Issuer<'a> {
-    pub fn known_issuer() -> Option<KnownIssuer> {}
+    pub fn known_issuer(&self) -> Option<KnownIssuer> {
+        KnownIssuer::from_str(&self.0).ok()
+    }
 }
 
-/// An enumeration over known issuer ids
-pub enum KnownIssuer {}
-*/
+/// An enumeration over known certificate issuers
+#[non_exhaustive]
+#[derive(
+    IntoStaticStr,
+    AsRefStr,
+    EnumString,
+    Display,
+    Copy,
+    Clone,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    PartialOrd,
+    Ord,
+)]
+pub enum KnownIssuer {
+    #[strum(to_string = "Root-CA00000003-MS00000012")]
+    RootCa00000003Ms00000012,
+    #[strum(to_string = "Nintendo CA - G3_NintendoCTR2prod")]
+    NintendoCaG3NintendoCtr2Prod,
+    #[strum(to_string = "Nintendo CA - G3_NintendoCTR2dev")]
+    NintendoCaG3NintendoCtr2Dev,
+}
 
 /// An enumeration over all possible magic numbers representing a kind of [`Key`]
 ///
@@ -421,6 +438,41 @@ impl Key<'_> {
 /// [`Certificate`]: ./struct.Certificate.html
 #[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Name<'a>(pub Cow<'a, str>);
+
+impl<'a> Name<'a> {
+    /// Extract the device id from the [`Name`], if possible
+    ///
+    /// [`Name`]: ./struct.Name.html
+    pub fn device_id(&self) -> Option<u32> {
+        self.0
+            .get(..2)
+            .map_or(false, |prefix| match prefix {
+                "NG" | "CT" => true,
+                _ => false,
+            })
+            .then(|| {
+                self.0
+                    .get(2..10)
+                    .and_then(|id| u32::from_str_radix(id, 16).ok())
+            })
+            .flatten()
+    }
+
+    /// Attempt to get the [`console::common::Kind`] from the [`Name`], is possible
+    ///
+    /// [`console::common::Kind`]: ../console/common/enum.Kind.html
+    /// [`Name`]: ./struct.Name.html
+    pub fn console_kind(&self) -> Option<ConsoleKind> {
+        self.0
+            .get(..2)
+            .map(|k| match k {
+                "NG" => Some(ConsoleKind::WiiU),
+                "CT" => Some(ConsoleKind::N3ds),
+                _ => None,
+            })
+            .flatten()
+    }
+}
 
 /// A newtype that defines various operations on a [`Certificate`]'s key id section
 ///
