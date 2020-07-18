@@ -7,6 +7,18 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
+//! A collection of type definitions used for mimicking a 3ds console
+//!
+//! The main focal point of this module is the [`Console3ds`] structure, which implements the
+//! [`Console`] trait. This type contains a wealth of information all filtered through and exposed
+//! through the API of the [`Console`] trait
+//!
+//! Aside from that, there is also an enumeration over the 3ds models at [`Model`]
+//!
+//! [`Console3ds`]: ./struct.Console3ds.html
+//! [`Console`]: ../common/trait.Console.html
+//! [`Model`]: ./enum.Model.html
+
 use base64;
 use http::header::{self, HeaderMap, HeaderValue};
 use isocountry::CountryCode;
@@ -14,19 +26,24 @@ use isolanguage_1::LanguageCode;
 use std::borrow::Cow;
 use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
 
-use crate::model::{
-    certificate::Certificate,
-    console::common::{
-        Console, Environment, HeaderConstructionError, Kind as ConsoleKind, Region, Type,
-    },
-    server::Kind as ServerKind,
-    title::{
-        id::{TitleId, UniqueId},
-        version::TitleVersion,
+use crate::{
+    internal::builder_set,
+    model::{
+        certificate::Certificate,
+        console::common::{
+            Console, Environment, HeaderConstructionError, Kind as ConsoleKind, Region, Type,
+        },
+        server::Kind as ServerKind,
+        title::{
+            id::{TitleId, UniqueId},
+            version::TitleVersion,
+        },
     },
 };
 
-/// the model of the console. data for a 3ds-only header
+/// The 3ds console's model. For more information, see [3dbrew]
+///
+/// [3dbrew]: https://www.3dbrew.org/wiki/Cfg:GetSystemModel#System_Model_Values
 #[derive(
     IntoStaticStr,
     AsRefStr,
@@ -56,32 +73,41 @@ pub enum Model {
     NintendoNew2dsXL,
 }
 
-/// the builder structure used to ease building Console3ds types
+/// A builder-like type, used to ease in the creation of [`Console3ds`] types
+///
+/// [`Console3ds`]: ./struct.Console3ds.html
 #[derive(Debug, Default)]
 pub struct Console3dsBuilder<'a> {
-    console: Console3ds<'a>,
-}
-
-macro_rules! builder_set {
-    ($field:ident, $type:ty) => {
-        pub fn $field(&mut self, $field: $type) -> &mut Self {
-            self.console.$field = Some($field);
-            self
-        }
-    };
+    pub(crate) console: Console3ds<'a>,
 }
 
 impl<'a> Console3dsBuilder<'a> {
+    /// "Builds" the builder type, returning the internal [`Console3ds`]
+    ///
+    /// [`Console3ds`]: ./struct.Console3ds.html
     fn build(self) -> Console3ds<'a> {
         self.console
     }
 
+    /// Sets the [`title_id`] field to the provided [`TitleId`] and derives the [`UniqueId`] from
+    /// it, producing the [`unique_id`] field
+    ///
+    /// [`title_id`]: ./struct.Console3ds.html#structfield.title_id
+    /// [`TitleId`]: ../../title/id/struct.TitleId.html
+    /// [`UniqueId`]: ../../title/id/struct.UniqueId.html
+    /// [`unique_id`]: ./struct.Console3ds.html#structfield.unique_id
     pub fn title_id_and_unique_id(&mut self, title_id: TitleId) -> &mut Self {
         self.console.unique_id = Some(title_id.unique_id());
         self.console.title_id = Some(title_id);
         self
     }
 
+    /// Sets the [`device_certificate`] field to the provided [`Certificate`] and derives the
+    /// device id from it, producing the [`device_id`] field
+    ///
+    /// [`device_certificate`]: ./struct.Console3ds.html#structfield.device_certificate
+    /// [`Certificate`]: ../../certificate/struct.Certificate.html
+    /// [`device_id`]: ./struct.Console3ds.html#structfield.device_id
     pub fn device_certificate_and_device_id(
         &mut self,
         device_certificate: Certificate<'a>,
@@ -91,29 +117,37 @@ impl<'a> Console3dsBuilder<'a> {
         self
     }
 
-    builder_set!(device_type, Type);
-    builder_set!(device_id, u32);
-    builder_set!(serial, Cow<'a, str>);
-    builder_set!(system_version, Cow<'a, str>);
-    builder_set!(region, Region);
-    builder_set!(country, CountryCode);
-    builder_set!(client_id, Cow<'a, str>);
-    builder_set!(client_secret, Cow<'a, str>);
-    builder_set!(fpd_version, u16);
-    builder_set!(environment, Environment);
-    builder_set!(title_id, TitleId);
-    builder_set!(unique_id, UniqueId);
-    builder_set!(title_version, TitleVersion);
-    builder_set!(device_certificate, Certificate<'a>);
-    builder_set!(language, LanguageCode);
-    builder_set!(api_version, u16);
-    builder_set!(device_model, Model);
+    builder_set!("device_type", console, device_type, Type);
+    builder_set!("device_id", console, device_id, u32);
+    builder_set!("serial", console, serial, Cow<'a, str>);
+    builder_set!("system_version", console, system_version, TitleVersion);
+    builder_set!("region", console, region, Region);
+    builder_set!("country", console, country, CountryCode);
+    builder_set!("client_id", console, client_id, Cow<'a, str>);
+    builder_set!("client_secret", console, client_secret, Cow<'a, str>);
+    builder_set!("fpd_version", console, fpd_version, u16);
+    builder_set!("environment", console, environment, Environment);
+    builder_set!("title_id", console, title_id, TitleId);
+    builder_set!("unique_id", console, unique_id, UniqueId);
+    builder_set!("title_version", console, title_version, TitleVersion);
+    builder_set!(
+        "device_certificate",
+        console,
+        device_certificate,
+        Certificate<'a>
+    );
+    builder_set!("language", console, language, LanguageCode);
+    builder_set!("api_version", console, api_version, u16);
+    builder_set!("device_model", console, device_model, Model);
 }
 
-/// information required to emulate a 3ds.
+/// A structure containing all possible information that can be used in the mimicking of a 3ds
 ///
-/// any fields for which None is provided will be
-/// omitted in the header output.
+/// All fields are optional, and if they are `None`, then they will be omitted wherever this
+/// structure is used, unless that field is mandatory.
+///
+/// Usage of this structure implies that the mocked device's platform id (a value used in the
+/// headers of requests to the account server and possibly others) is `0`
 #[non_exhaustive]
 #[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Console3ds<'a> {
@@ -129,7 +163,7 @@ pub struct Console3ds<'a> {
     pub serial: Option<Cow<'a, str>>,
 
     /// provides `X-Nintendo-System-Version`
-    pub system_version: Option<Cow<'a, str>>,
+    pub system_version: Option<TitleVersion>,
 
     /// provides `X-Nintendo-Region`
     pub region: Option<Region>,
@@ -162,8 +196,6 @@ pub struct Console3ds<'a> {
     /// guaranteed to be 384 bytes long
     pub device_certificate: Option<Certificate<'a>>,
 
-    /** unsure */
-
     /// provides `Accept-Language`
     pub language: Option<LanguageCode>,
 
@@ -177,6 +209,11 @@ pub struct Console3ds<'a> {
 }
 
 impl<'a> Console3ds<'a> {
+    /// Creates a new [`Console3ds`] using the provided closure, which is passed a
+    /// [`Console3dsBuilder`] to operate upon
+    ///
+    /// [`Console3ds`]: ./struct.Console3ds.html
+    /// [`Console3dsBuilder`]: ./struct.Console3dsBuilder.html
     pub fn new<F>(f: F) -> Self
     where
         F: for<'b> FnOnce(&'b mut Console3dsBuilder<'a>) -> &'b mut Console3dsBuilder<'a>,
@@ -221,7 +258,10 @@ impl<'a> Console<'a> for Console3ds<'_> {
                 }
 
                 if let Some(system_version) = &self.system_version {
-                    let _ = h.append("X-Nintendo-System-Version", system_version.parse()?);
+                    let _ = h.append(
+                        "X-Nintendo-System-Version",
+                        format!("{:0>4X}", system_version.0).parse()?,
+                    );
                 }
 
                 if let Some(region) = self.region {

@@ -45,16 +45,6 @@ impl<'a> Certificate<'a> {
     const SLICE_TO_ARRAY_PANIC_MESSAGE: &'static str =
         "unable to convert a slice into an array (this should be impossible)";
 
-    /// The message that appears when a panic occurs while trying to convert a signature to its
-    /// corresponding magic
-    const SIGNATURE_TO_SIGNATURE_MAGIC_PANIC_MESSAGE: &'static str =
-        "unable to convert a signature to its corresponding signature magic (this should be impossible)";
-
-    /// The message that appears when a panic occurs while trying to convert a key to its
-    /// corresponding magic
-    const KEY_TO_KEY_MAGIC_PANIC_MESSAGE: &'static str =
-        "unable to convert a key to its corresponding key magic (this should be impossible)";
-
     /// Creates a new [`Certificate`] from its portions
     ///
     /// [`Certificate`]: ./struct.Certificate.html
@@ -112,16 +102,6 @@ impl<'a> Certificate<'a> {
             Signature::EcdsaWithSha256(signature) => {
                 signature_match_clause!(EcdsaWithSha256, signature, 0x40)
             }
-
-            _ => {
-                return Err(CertificateError::UnsupportedSignatureType(
-                    self.signature
-                        .to_signature_magic()
-                        .expect(Self::SIGNATURE_TO_SIGNATURE_MAGIC_PANIC_MESSAGE)
-                        .to_u32()
-                        .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE),
-                ))
-            }
         }
 
         {
@@ -153,16 +133,6 @@ impl<'a> Certificate<'a> {
             Key::Rsa4096(key) => key_match_clause!(Rsa4096, key, 0x34),
             Key::Rsa2048(key) => key_match_clause!(Rsa2048, key, 0x34),
             Key::EllipticCurve(key) => key_match_clause!(EllipticCurve, key, 0x3c),
-
-            _ => {
-                return Err(CertificateError::UnsupportedKeyType(
-                    self.key
-                        .to_key_magic()
-                        .expect(Self::KEY_TO_KEY_MAGIC_PANIC_MESSAGE)
-                        .to_u32()
-                        .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE),
-                ))
-            }
         }
 
         Ok(certificate)
@@ -219,8 +189,6 @@ impl TryFrom<&[u8]> for Certificate<'_> {
             SignatureMagic::EcdsaWithSha256 => {
                 signature_magic_match_clause!(EcdsaWithSha256, 0x40, 0x80)
             }
-
-            _ => return Err(CertificateError::UnsupportedSignatureType(signature_type)),
         };
 
         let mut issuer = value
@@ -261,8 +229,6 @@ impl TryFrom<&[u8]> for Certificate<'_> {
             KeyMagic::Rsa4096 => key_magic_match_clause!(Rsa4096, 0x28c),
             KeyMagic::Rsa2048 => key_magic_match_clause!(Rsa2048, 0x18c),
             KeyMagic::EllipticCurve => key_magic_match_clause!(EllipticCurve, 0xc4),
-
-            _ => return Err(CertificateError::UnsupportedKeyType(key_type)),
         };
 
         let mut name = value
@@ -354,8 +320,6 @@ impl Signature<'_> {
             Self::Rsa4096WithSha256(_) => Some(SignatureMagic::Rsa4096WithSha256),
             Self::Rsa2048WithSha256(_) => Some(SignatureMagic::Rsa2048WithSha256),
             Self::EcdsaWithSha256(_) => Some(SignatureMagic::EcdsaWithSha256),
-
-            _ => None,
         }
     }
 }
@@ -427,8 +391,6 @@ impl Key<'_> {
             Self::Rsa4096(_) => Some(KeyMagic::Rsa4096),
             Self::Rsa2048(_) => Some(KeyMagic::Rsa2048),
             Self::EllipticCurve(_) => Some(KeyMagic::EllipticCurve),
-
-            _ => None,
         }
     }
 }

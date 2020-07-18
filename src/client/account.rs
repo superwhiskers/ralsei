@@ -31,7 +31,7 @@ use crate::{
     model::{
         console::common::{Console, HeaderConstructionError, Kind as ConsoleKind},
         network::Nnid,
-        server::{Kind as ServerKind, DEFAULT_ACCOUNT_SERVER_HOST},
+        server::{account_api_endpoints, Kind as ServerKind, DEFAULT_ACCOUNT_SERVER_HOST},
         xml::error as error_xml,
     },
 };
@@ -105,7 +105,6 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
                         match console.read().kind() {
                             ConsoleKind::N3ds => Identity::from_pkcs12(CTR_COMMON_1, "ralsei")?,
                             ConsoleKind::WiiU => Identity::from_pkcs12(WUP_ACCOUNT_1, "ralsei")?,
-                            kind => return Err(ClientError::UnsupportedConsoleKind(kind)),
                         }
                     });
 
@@ -155,7 +154,7 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
     /// [`Nnid`]: ../../model/network/struct.Nnid.html
     pub async fn does_user_exist(&self, nnid: Nnid<'_>) -> Result<bool, ClientError> {
         let mut path = nnid.0.into_owned();
-        path.insert_str(0, "/v1/api/people/");
+        path.insert_str(0, account_api_endpoints::PEOPLE);
         let response = self
             .request(
                 Request::builder()

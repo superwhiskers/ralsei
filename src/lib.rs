@@ -36,6 +36,8 @@
 #![deny(clippy::mut_mut)]
 #![feature(bool_to_option)]
 #![feature(const_fn)]
+#![feature(decl_macro)]
+#![feature(concat_idents)]
 
 //pub mod server;
 
@@ -44,3 +46,5 @@ pub mod client;
 
 pub mod keypairs;
 pub mod model;
+
+mod internal;

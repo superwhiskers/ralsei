@@ -26,19 +26,8 @@ and purpose
 | `X-Nintendo-Unique-ID`           | str[5]  | the unique id section of the title id left-padded to 5 digits if less (all o3ds titles have 5 max, n3ds exclusives have 2 in the sixth leftmost digit) |
 | `X-Nintendo-Application-Version` | str[4]  | the major version of the title in hexadecimal                                                                                                          |
 | `X-Nintendo-Device-Cert`         | str     | [the device certificate encoded in base64](#device-cert)                                                                                               |
-
-#### unsure
-
-these following headers are ones that are not known to
-be provided by all consoles, and as such, they go here.
-none of them are not important to emulate a console,
-but they may be useful for extremely accurate mimicking
-of one to avoid being banned
-
-| field             | type   | description                                              |
-| ----------------- | ------ | -------------------------------------------------------- |
-| `Accept-Language` | str[2] | a valid ISO 639-1 language code                          |
-| `Accept`          | str    | a valid content-type to accept. the 3ds sets it to `*/*` |
+| `Accept-Language`                | str[2]  | a valid ISO 639-1 language code                                                                                                                        |
+| `Accept`                         | str     | a valid content-type to accept. the 3ds sets it to `*/*`                                                                                               |
 
 #### exceptions
 
