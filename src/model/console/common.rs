@@ -21,7 +21,7 @@
 
 use http::header::{HeaderMap, HeaderValue, InvalidHeaderValue};
 use num_derive::{FromPrimitive, ToPrimitive};
-use std::{borrow::Cow, fmt, num::ParseIntError, str::FromStr};
+use std::{borrow::Cow, fmt, num::ParseIntError};
 use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
 use thiserror::Error;
 
@@ -187,36 +187,35 @@ impl ConsoleSerial<'_> {
     ///
     /// [`InvalidSerialError`]: ./enum.InvalidSerialError.html
     pub fn check(&self) -> Result<(), InvalidSerialError> {
-        let serial_number = self.number()?;
-        (10 - (((((serial_number / 100000000) % 10)
-            + ((serial_number / 1000000) % 10)
-            + ((serial_number / 10000) % 10)
-            + ((serial_number / 100) % 10))
-            + ((((serial_number / 10000000) % 10)
-                + ((serial_number / 100000) % 10)
-                + ((serial_number / 1000) % 10)
-                + ((serial_number / 10) % 10))
+        let serial_number = self.number()?.as_bytes();
+        (10 - (((((serial_number[0] - 48) as u16)
+            + ((serial_number[2] - 48) as u16)
+            + ((serial_number[4] - 48) as u16)
+            + ((serial_number[6] - 48) as u16))
+            + ((((serial_number[1] - 48) as u16)
+                + ((serial_number[3] - 48) as u16)
+                + ((serial_number[5] - 48) as u16)
+                + ((serial_number[7] - 48) as u16))
                 * 3))
             % 10)
-            == serial_number % 10)
+            == (serial_number[8] - 48) as u16)
             .then_some(())
             .ok_or(InvalidSerialError::CheckDigitInvalid)
     }
 
     /// Returns the integer portion of the serial (including check digit)
-    pub fn number(&self) -> Result<u32, InvalidSerialError> {
-        Ok(u32::from_str(
-            self.0
-                .get(match self.region()? {
-                    Region::Japan
-                    | Region::Europe
-                    | Region::Australia
-                    | Region::Korea
-                    | Region::China => 3..12,
-                    Region::UnitedStates | Region::Taiwan => 2..11,
-                })
-                .ok_or(InvalidSerialError::OutOfBounds)?,
-        )?)
+    pub fn number(&self) -> Result<&str, InvalidSerialError> {
+        Ok(self
+            .0
+            .get(match self.region()? {
+                Region::Japan
+                | Region::Europe
+                | Region::Australia
+                | Region::Korea
+                | Region::China => 3..12,
+                Region::UnitedStates | Region::Taiwan => 2..11,
+            })
+            .ok_or(InvalidSerialError::OutOfBounds)?)
     }
 
     /// Returns the appropriate region for the region portion of the serial

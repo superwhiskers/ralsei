@@ -20,7 +20,8 @@ use ralsei::{
         certificate::Certificate,
         console::{
             common::{
-                Environment as DeviceEnvironment, Region as DeviceRegion, Type as DeviceType,
+                ConsoleSerial, Environment as DeviceEnvironment, Region as DeviceRegion,
+                Type as DeviceType,
             },
             n3ds::{Console3ds, Model as N3dsModel},
         },
@@ -44,13 +45,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             (about: "parse a b64-encoded certificate and display as much information about it as possible")
             (@arg CERTIFICATE: +required "the certificate to parse, in b64 format")
         )
+        (@subcommand serial =>
+            (about: "parse a serial number and display as much information about it as possible")
+            (@arg SERIAL: +required "the serial to parse")
+        )
     ).get_matches();
 
     let console = Arc::new(RwLock::new(Console3ds::new(|b| {
         b.device_type(DeviceType::Retail)
             .device_id(1) // dummy
             .serial(Cow::Borrowed("1")) // dummy
-            .system_version(Cow::Borrowed("02D0"))
+            .system_version(TitleVersion(0x02D0))
             .region(DeviceRegion::UnitedStates)
             .country(CountryCode::USA)
             .client_id(Cow::Borrowed("ea25c66c26b403376b4c5ed94ab9cdea"))
@@ -95,6 +100,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
             println!("re-encoded: {}", base64::encode(cert.to_bytes()?));
         }
+        ("serial", Some(arguments)) => println!(
+            "valid: {}",
+            ConsoleSerial(Cow::Borrowed(
+                arguments
+                    .value_of("SERIAL")
+                    .expect("no serial was provided (this should never happen)")
+            ))
+            .check()
+            .is_ok()
+        ),
         _ => println!("you shouldn't have done that"),
     }
     Ok(())
