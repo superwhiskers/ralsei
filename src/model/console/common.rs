@@ -21,7 +21,7 @@
 
 use http::header::{HeaderMap, HeaderValue, InvalidHeaderValue};
 use num_derive::{FromPrimitive, ToPrimitive};
-use std::fmt;
+use std::{fmt, num::ParseIntError, str::FromStr, borrow::Cow};
 use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
 use thiserror::Error;
 
@@ -81,7 +81,7 @@ pub enum HeaderConstructionError {
     #[error("A Certificate could not be converted to or from bytes")]
     CertificateError(#[from] CertificateError),
 
-    /// An error returned when the server that you are requesting headers from has no corresponding
+    /// An error returned when the server that you are requesting headers for has no corresponding
     /// headers to be recieved from the console that you intend to mimic.
     #[error("`{0:?}` is not an implemented ServerKind")]
     UnimplementedServerKind(&'static str),
@@ -170,4 +170,94 @@ pub enum Region {
     China = 0b0010000,
     Korea = 0b0100000,
     Taiwan = 0b1000000,
+}
+
+/// A Nintendo console's serial
+pub struct ConsoleSerial<'a>(pub Cow<'a, str>);
+
+// TODO(superwhiskers): split out check digit generation to allow people to create a valid one?
+// TODO(superwhiskers): make console structs use this to derive console region and for general
+//                      user-friendliness
+
+impl ConsoleSerial<'_> {
+    /// Verifies the integer portion of the console's serial
+    ///
+    /// If no error was returned, the check succeeded. Otherwise, the specific error can be figured
+    /// out by checking the returned [`InvalidSerialError`]
+    ///
+    /// [`InvalidSerialError`]: ./enum.InvalidSerialError.html
+    pub fn check(&self) -> Result<(), InvalidSerialError> {
+        let serial_number = self.number()?;
+        (10 - (((((serial_number / 100000000) % 10)
+            + ((serial_number / 1000000) % 10)
+            + ((serial_number / 10000) % 10)
+            + ((serial_number / 100) % 10))
+            + ((((serial_number / 10000000) % 10)
+                + ((serial_number / 100000) % 10)
+                + ((serial_number / 1000) % 10)
+                + ((serial_number / 10) % 10))
+                * 3))
+            % 10)
+            == serial_number % 10)
+            .then_some(())
+            .ok_or(InvalidSerialError::CheckDigitInvalid)
+    }
+
+    /// Returns the integer portion of the serial (including check digit)
+    pub fn number(&self) -> Result<u32, InvalidSerialError> {
+        Ok(u32::from_str(
+            self.0
+                .get(match self.region()? {
+                    Region::Japan
+                    | Region::Europe
+                    | Region::Australia
+                    | Region::Korea
+                    | Region::China => 3..12,
+                    Region::UnitedStates | Region::Taiwan => 2..11,
+                })
+                .ok_or(InvalidSerialError::OutOfBounds)?,
+        )?)
+    }
+
+    /// Returns the appropriate region for the region portion of the serial
+    ///
+    /// Currently, it does not touch the optional second letter of the region portion as there is
+    /// currently no information as to its significance
+    pub fn region(&self) -> Result<Region, InvalidSerialError> {
+        Ok(
+            match self.0.chars().nth(1).ok_or(InvalidSerialError::OutOfBounds)? {
+                'J' => Region::Japan,
+                'W' => Region::UnitedStates,
+                'S' => Region::Taiwan,
+                'E' => Region::Europe,
+                'A' => Region::Australia,
+                'K' => Region::Korea,
+                'C' => Region::China,
+                r   => return Err(InvalidSerialError::InvalidRegion(r)),
+            },
+        )
+    }
+}
+
+/// An enumeration over the possible errors that can occur when verifying a [`Serial`]
+///
+/// [`Serial`]: ./struct.Serial.html
+#[non_exhaustive]
+#[derive(Error, Debug)]
+pub enum InvalidSerialError {
+    /// An error returned when the integer section of the serial is an invalid integer
+    #[error("The integer portion of your serial was unable to be parsed")]
+    InvalidInteger(#[from] ParseIntError),
+
+    /// An error returned when the serial is invalid
+    #[error("The integer portion of your serial has an invalid check digit")]
+    CheckDigitInvalid,
+
+    /// An error returned when the region is invalid
+    #[error("The region portion of your serial is not valid")]
+    InvalidRegion(char),
+
+    /// An error returned when the data being operated upon is too small
+    #[error("The provided serial number is not long enough")]
+    OutOfBounds,
 }
