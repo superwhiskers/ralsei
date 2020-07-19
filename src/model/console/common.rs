@@ -21,7 +21,7 @@
 
 use http::header::{HeaderMap, HeaderValue, InvalidHeaderValue};
 use num_derive::{FromPrimitive, ToPrimitive};
-use std::{fmt, num::ParseIntError, str::FromStr, borrow::Cow};
+use std::{borrow::Cow, fmt, num::ParseIntError, str::FromStr};
 use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
 use thiserror::Error;
 
@@ -225,7 +225,12 @@ impl ConsoleSerial<'_> {
     /// currently no information as to its significance
     pub fn region(&self) -> Result<Region, InvalidSerialError> {
         Ok(
-            match self.0.chars().nth(1).ok_or(InvalidSerialError::OutOfBounds)? {
+            match self
+                .0
+                .chars()
+                .nth(1)
+                .ok_or(InvalidSerialError::OutOfBounds)?
+            {
                 'J' => Region::Japan,
                 'W' => Region::UnitedStates,
                 'S' => Region::Taiwan,
@@ -233,7 +238,7 @@ impl ConsoleSerial<'_> {
                 'A' => Region::Australia,
                 'K' => Region::Korea,
                 'C' => Region::China,
-                r   => return Err(InvalidSerialError::InvalidRegion(r)),
+                r => return Err(InvalidSerialError::InvalidRegion(r)),
             },
         )
     }
