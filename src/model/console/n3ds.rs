@@ -25,13 +25,16 @@ use isocountry::CountryCode;
 use isolanguage_1::LanguageCode;
 use std::borrow::Cow;
 use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
+use thiserror::Error;
 
 use crate::{
     internal::builder_set,
     model::{
         certificate::Certificate,
         console::common::{
-            Console, Environment, HeaderConstructionError, Kind as ConsoleKind, Region, Type,
+            Console, ConsoleSerial, Environment, HeaderConstructionError, InvalidSerialError,
+            Kind as ConsoleKind, Model as ConsoleModel, Region as ConsoleRegion,
+            Type as ConsoleType,
         },
         server::Kind as ServerKind,
         title::{
@@ -62,15 +65,15 @@ pub enum Model {
     #[strum(to_string = "CTR")]
     Nintendo3ds,
     #[strum(to_string = "SPR")]
-    Nintendo3dsXL,
-    #[strum(to_string = "KTR")]
-    NintendoNew3ds,
+    Nintendo3dsXl,
     #[strum(to_string = "FTR")]
     Nintendo2ds,
+    #[strum(to_string = "KTR")]
+    NintendoNew3ds,
     #[strum(to_string = "RED")]
-    NintendoNew3dsXL,
+    NintendoNew3dsXl,
     #[strum(to_string = "JAN")]
-    NintendoNew2dsXL,
+    NintendoNew2dsXl,
 }
 
 /// A builder-like type, used to ease in the creation of [`Console3ds`] types
@@ -79,6 +82,10 @@ pub enum Model {
 #[derive(Debug, Default)]
 pub struct Console3dsBuilder<'a> {
     pub(crate) console: Console3ds<'a>,
+}
+
+macro_rules! generate_serial_derivation_method {
+
 }
 
 impl<'a> Console3dsBuilder<'a> {
@@ -117,11 +124,69 @@ impl<'a> Console3dsBuilder<'a> {
         self
     }
 
-    builder_set!("device_type", console, device_type, Type);
+    /// Sets the [`serial`] field to the provided [`ConsoleSerial`] and derives the [`Region`] from
+    /// it, producing the [`region`] field
+    ///
+    /// [`serial`]: ./struct.Console3ds.html#structfield.serial
+    /// [`ConsoleSerial`]: ../common/struct.ConsoleSerial.html
+    /// [`Region`]: ../common/enum.Region.html
+    /// [`region`]: ./struct.Console3ds.html#structfield.region
+    pub fn serial_and_region(
+        &mut self,
+        serial: ConsoleSerial<'a>,
+    ) -> Result<&mut Self, InvalidSerialError> {
+        self.console.region = Some(serial.region()?);
+        self.console.serial = Some(serial);
+        Ok(self)
+    }
+
+    /// Sets the [`serial`] field to the provided [`ConsoleSerial`] and derives the [`Model`] from
+    /// it, producing the [`device_model`] field
+    ///
+    /// [`serial`]: ./struct.Console3ds.html#structfield.serial
+    /// [`ConsoleSerial`]: ../common/struct.ConsoleSerial.html
+    /// [`Model`]: ./enum.Model.html
+    /// [`device_model`]: ./struct.Console3ds.html#structfield.device_model
+    pub fn serial_and_device_model(
+        &mut self,
+        serial: ConsoleSerial<'a>,
+    ) -> Result<&mut Self, Console3dsBuilderError> {
+        self.console.device_model = Some(match serial.device()? {
+            (ConsoleModel::Nintendo3ds, _) => Model::Nintendo3ds,
+            (ConsoleModel::Nintendo3dsXl, _) => Model::Nintendo3dsXl,
+            (ConsoleModel::Nintendo2ds, _) => Model::Nintendo2ds,
+            (ConsoleModel::NintendoNew3ds, _) => Model::NintendoNew3ds,
+            (ConsoleModel::NintendoNew3dsXl, _) => Model::NintendoNew3dsXl,
+            (ConsoleModel::NintendoNew2dsXl, _) => Model::NintendoNew2dsXl,
+            (model, _) => return Err(Console3dsBuilderError::UnimplementedConsoleModel(model)),
+        });
+        self.console.serial = Some(serial);
+        Ok(self)
+    }
+
+    /// Sets the [`serial`] field to the provided [`ConsoleSerial`] and derives the [`Type`] from
+    /// it, producing the [`device_type`] field
+    ///
+    /// [`serial`]: ./struct.Console3ds.html#structfield.serial
+    /// [`ConsoleSerial`]: ../common/struct.ConsoleSerial.html
+    /// [`Type`]: ../common/enum.Type.html
+    /// [`device_type`]: ./struct.Console3ds.html#structfield.device_type
+    pub fn serial_and_device_type(
+        &mut self,
+        serial: ConsoleSerial<'a>,
+    ) -> Result<&mut Self, Console3dsBuilderError> {
+        self.console.device_type = Some(serial.device()?.1);
+        self.console.serial = Some(serial);
+        Ok(self)
+    }
+
+    // pub fn serial_region_and_device_model
+
+    builder_set!("device_type", console, device_type, ConsoleType);
     builder_set!("device_id", console, device_id, u32);
-    builder_set!("serial", console, serial, Cow<'a, str>);
+    builder_set!("serial", console, serial, ConsoleSerial<'a>);
     builder_set!("system_version", console, system_version, TitleVersion);
-    builder_set!("region", console, region, Region);
+    builder_set!("region", console, region, ConsoleRegion);
     builder_set!("country", console, country, CountryCode);
     builder_set!("client_id", console, client_id, Cow<'a, str>);
     builder_set!("client_secret", console, client_secret, Cow<'a, str>);
@@ -141,6 +206,26 @@ impl<'a> Console3dsBuilder<'a> {
     builder_set!("device_model", console, device_model, Model);
 }
 
+/// An enumeration over all possible errors that can occur when using a [`Console3dsBuilder`]
+///
+/// [`Console3dsBuilder`]: ./struct.Console3dsBuilder.html
+#[non_exhaustive]
+#[derive(Error, Debug)]
+pub enum Console3dsBuilderError {
+    /// An error encountered when using a [`Serial`]
+    ///
+    /// [`Serial`]: ../common/struct.Serial.html
+    #[error("An error was encountered while using a Serial")]
+    InvalidSerialError(#[from] InvalidSerialError),
+
+    /// An error encountered when the provided [`Serial`] has a console model that has no
+    /// corresponding model for a 3ds
+    ///
+    /// [`Serial`]: ../common/struct.Serial.html
+    #[error("The provided Serial has a console model has no corresponding 3ds model")]
+    UnimplementedConsoleModel(ConsoleModel),
+}
+
 /// A structure containing all possible information that can be used in the mimicking of a 3ds
 ///
 /// All fields are optional, and if they are `None`, then they will be omitted wherever this
@@ -154,19 +239,19 @@ pub struct Console3ds<'a> {
     /// inherent: `X-Nintendo-Platform-ID` = 0
 
     /// provides `X-Nintendo-Device-Type`
-    pub device_type: Option<Type>,
+    pub device_type: Option<ConsoleType>,
 
     /// provides `X-Nintendo-Device-ID`
     pub device_id: Option<u32>,
 
     /// provides `X-Nintendo-Serial-Number`
-    pub serial: Option<Cow<'a, str>>,
+    pub serial: Option<ConsoleSerial<'a>>,
 
     /// provides `X-Nintendo-System-Version`
     pub system_version: Option<TitleVersion>,
 
     /// provides `X-Nintendo-Region`
-    pub region: Option<Region>,
+    pub region: Option<ConsoleRegion>,
 
     /// provides `X-Nintendo-Country`
     pub country: Option<CountryCode>,
@@ -254,7 +339,7 @@ impl<'a> Console<'a> for Console3ds<'_> {
                 }
 
                 if let Some(serial) = &self.serial {
-                    let _ = h.append("X-Nintendo-Serial-Number", serial.parse()?);
+                    let _ = h.append("X-Nintendo-Serial-Number", serial.0.parse()?);
                 }
 
                 if let Some(system_version) = &self.system_version {

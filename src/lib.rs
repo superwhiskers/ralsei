@@ -38,6 +38,7 @@
 #![feature(const_fn)]
 #![feature(decl_macro)]
 #![feature(concat_idents)]
+#![feature(or_patterns)]
 
 //pub mod server;
 

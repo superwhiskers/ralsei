@@ -54,7 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let console = Arc::new(RwLock::new(Console3ds::new(|b| {
         b.device_type(DeviceType::Retail)
             .device_id(1) // dummy
-            .serial(Cow::Borrowed("1")) // dummy
+            .serial(ConsoleSerial(Cow::Borrowed("1"))) // dummy
             .system_version(TitleVersion(0x02D0))
             .region(DeviceRegion::UnitedStates)
             .country(CountryCode::USA)
@@ -101,14 +101,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("re-encoded: {}", base64::encode(cert.to_bytes()?));
         }
         ("serial", Some(arguments)) => println!(
-            "valid: {}",
+            "valid: {:?}",
             ConsoleSerial(Cow::Borrowed(
                 arguments
                     .value_of("SERIAL")
                     .expect("no serial was provided (this should never happen)")
             ))
-            .check()
-            .is_ok()
+            .verify()
         ),
         _ => println!("you shouldn't have done that"),
     }

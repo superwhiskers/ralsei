@@ -231,7 +231,7 @@ pub enum ClientError {
 
     /// An error was encountered while constructing a Uri
     #[error("An error was encountered while constructing a Uri")]
-    UriConstructionError(#[from] InvalidUri),
+    UriConstructionErro(#[from] InvalidUri),
 
     /// An error was encountered while deserializing XML
     #[error("An error was encountered while deserializing XML")]

@@ -172,12 +172,50 @@ pub enum Region {
     Taiwan = 0b1000000,
 }
 
+/// An enumeration over all possible consoles that can have the serial format as implemented by
+/// [`ConsoleSerial`]
+///
+/// [`ConsoleSerial`]: ./struct.ConsoleSerial.html
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+pub enum Model {
+    NintendoDsi,
+    NintendoDsiXl,
+    NintendoZoneBox,
+    NintendoWiiU,
+    NintendoWiiUGamepad,
+    Nintendo3ds,
+    Nintendo3dsXl,
+    Nintendo2ds,
+    NintendoNew3ds,
+    NintendoNew3dsXl,
+    NintendoNew2dsXl,
+}
+
 /// A Nintendo console's serial
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct ConsoleSerial<'a>(pub Cow<'a, str>);
 
-// TODO(superwhiskers): split out check digit generation to allow people to create a valid one?
-// TODO(superwhiskers): make console structs use this to derive console region and for general
-//                      user-friendliness
+macro generate_region_length_match($self:ident, $first_yield:expr, $second_yield:expr) {
+    match $self.region()? {
+        Region::Japan | Region::Europe | Region::Australia | Region::Korea | Region::China => {
+            $first_yield
+        }
+        Region::UnitedStates | Region::Taiwan => $second_yield,
+    }
+}
+
+macro generate_check_digit_generation_code($serial:ident) {
+    10 - ((((($serial[0] - 48) as u16)
+        + (($serial[2] - 48) as u16)
+        + (($serial[4] - 48) as u16)
+        + (($serial[6] - 48) as u16))
+        + (((($serial[1] - 48) as u16)
+            + (($serial[3] - 48) as u16)
+            + (($serial[5] - 48) as u16)
+            + (($serial[7] - 48) as u16))
+            * 3))
+        % 10)
+}
 
 impl ConsoleSerial<'_> {
     /// Verifies the integer portion of the console's serial
@@ -186,36 +224,38 @@ impl ConsoleSerial<'_> {
     /// out by checking the returned [`InvalidSerialError`]
     ///
     /// [`InvalidSerialError`]: ./enum.InvalidSerialError.html
-    pub fn check(&self) -> Result<(), InvalidSerialError> {
+    pub fn verify(&self) -> Result<(), InvalidSerialError> {
         let serial_number = self.number()?.as_bytes();
-        (10 - (((((serial_number[0] - 48) as u16)
-            + ((serial_number[2] - 48) as u16)
-            + ((serial_number[4] - 48) as u16)
-            + ((serial_number[6] - 48) as u16))
-            + ((((serial_number[1] - 48) as u16)
-                + ((serial_number[3] - 48) as u16)
-                + ((serial_number[5] - 48) as u16)
-                + ((serial_number[7] - 48) as u16))
-                * 3))
-            % 10)
-            == (serial_number[8] - 48) as u16)
+        (generate_check_digit_generation_code!(serial_number) == (serial_number[8] - 48) as u16)
             .then_some(())
             .ok_or(InvalidSerialError::CheckDigitInvalid)
     }
 
+    /// Derives the check digit from the rest of the serial number
+    pub fn check_digit(&self) -> Result<u16, InvalidSerialError> {
+        let serial_number = self.number_without_check_digit()?.as_bytes();
+        Ok(generate_check_digit_generation_code!(serial_number))
+    }
+
     /// Returns the integer portion of the serial (including check digit)
     pub fn number(&self) -> Result<&str, InvalidSerialError> {
-        Ok(self
-            .0
-            .get(match self.region()? {
-                Region::Japan
-                | Region::Europe
-                | Region::Australia
-                | Region::Korea
-                | Region::China => 3..12,
-                Region::UnitedStates | Region::Taiwan => 2..11,
-            })
-            .ok_or(InvalidSerialError::OutOfBounds)?)
+        self.0
+            .get(generate_region_length_match!(self, 3..12, 2..11))
+            .ok_or(InvalidSerialError::OutOfBounds)
+    }
+
+    /// Returns the integer portion of the serial (without check digit)
+    pub fn number_without_check_digit(&self) -> Result<&str, InvalidSerialError> {
+        self.0
+            .get(generate_region_length_match!(self, 3..11, 2..10))
+            .ok_or(InvalidSerialError::OutOfBounds)
+    }
+
+    /// Returns the whole serial minus the check digit
+    pub fn serial_without_check_digit(&self) -> Result<&str, InvalidSerialError> {
+        self.0
+            .get(generate_region_length_match!(self, ..11, ..10))
+            .ok_or(InvalidSerialError::OutOfBounds)
     }
 
     /// Returns the appropriate region for the region portion of the serial
@@ -241,9 +281,141 @@ impl ConsoleSerial<'_> {
             },
         )
     }
+
+    /// Returns the appropriate console [`Model`] for the device portion of the serial
+    ///
+    /// [`Model`]: ./enum.Model.html
+    pub fn device_model(&self) -> Result<Model, InvalidSerialError> {
+        Ok(
+            match self
+                .0
+                .chars()
+                .nth(0)
+                .ok_or(InvalidSerialError::OutOfBounds)?
+            {
+                'T' | 'V' => Model::NintendoDsi,
+                'W' => Model::NintendoDsiXl,
+                'Z' => Model::NintendoZoneBox,
+                'F' => Model::NintendoWiiU,
+                'J' => Model::NintendoWiiUGamepad,
+                'C' | 'E' => Model::Nintendo3ds,
+                'S' | 'R' => Model::Nintendo3dsXl,
+                'A' | 'P' => Model::Nintendo2ds,
+                'Y' => Model::NintendoNew3ds,
+                'Q' => Model::NintendoNew3dsXl,
+                'N' => Model::NintendoNew2dsXl,
+            },
+        )
+    }
+
+    /// Returns the appropriate console [`Type`] for the device portion of the serial (for
+    /// n2ds/n3ds consoles it peeks into the number to derive the [`Type`])
+    ///
+    /// [`Type`]: ./enum.Type.html
+    pub fn device_type(&self) -> Result<Type, InvalidSerialError> {
+        Ok(
+            match self
+                .0
+                .chars()
+                .nth(0)
+                .ok_or(InvalidSerialError::OutOfBounds)?
+            {
+                'T' | 'W' | 'Z' | 'F' | 'J' | 'C' | 'S' | 'A' => Type::Retail,
+                'V' | 'E' | 'R' | 'P' => Type::Developer,
+                'Y' => match self
+                    .number()?
+                    .get(0..2)
+                    .ok_or(InvalidSerialError::OutOfBounds)?
+                {
+                    "00" | "91" => Type::Developer,
+                    _ => Type::Retail,
+                },
+                'Q' => match self
+                    .number()?
+                    .get(0..2)
+                    .ok_or(InvalidSerialError::OutOfBounds)?
+                {
+                    "00" => Type::Developer,
+                    _ => Type::Retail,
+                },
+                'N' => match self
+                    .number()?
+                    .get(0..2)
+                    .ok_or(InvalidSerialError::OutOfBounds)?
+                {
+                    "01" => Type::Developer,
+                    _ => Type::Retail,
+                },
+                d => return Err(InvalidSerialError::InvalidDevicePrefix(d)),
+            },
+        )
+    }
+
+    /// Returns the appropriate console [`Model`] and console [`Type`] for the device portion of
+    /// the serial (for n2ds/n3ds consoles it peeks into the number to derive the [`Type`])
+    ///
+    /// [`Model`]: ./enum.Model.html
+    /// [`Type`]: ./enum.Type.html
+    pub fn device(&self) -> Result<(Model, Type), InvalidSerialError> {
+        Ok(
+            match self
+                .0
+                .chars()
+                .nth(0)
+                .ok_or(InvalidSerialError::OutOfBounds)?
+            {
+                'T' => (Model::NintendoDsi, Type::Retail),
+                'V' => (Model::NintendoDsi, Type::Developer),
+                'W' => (Model::NintendoDsiXl, Type::Retail),
+                'Z' => (Model::NintendoZoneBox, Type::Retail),
+                'F' => (Model::NintendoWiiU, Type::Retail),
+                'J' => (Model::NintendoWiiUGamepad, Type::Retail),
+                'C' => (Model::Nintendo3ds, Type::Retail),
+                'E' => (Model::Nintendo3ds, Type::Developer),
+                'S' => (Model::Nintendo3dsXl, Type::Retail),
+                'R' => (Model::Nintendo3dsXl, Type::Developer),
+                'A' => (Model::Nintendo2ds, Type::Retail),
+                'P' => (Model::Nintendo2ds, Type::Developer),
+                'Y' => (
+                    Model::NintendoNew3ds,
+                    match self
+                        .number()?
+                        .get(0..2)
+                        .ok_or(InvalidSerialError::OutOfBounds)?
+                    {
+                        "00" | "91" => Type::Developer,
+                        _ => Type::Retail,
+                    },
+                ),
+                'Q' => (
+                    Model::NintendoNew3dsXl,
+                    match self
+                        .number()?
+                        .get(0..2)
+                        .ok_or(InvalidSerialError::OutOfBounds)?
+                    {
+                        "00" => Type::Developer,
+                        _ => Type::Retail,
+                    },
+                ),
+                'N' => (
+                    Model::NintendoNew2dsXl,
+                    match self
+                        .number()?
+                        .get(0..2)
+                        .ok_or(InvalidSerialError::OutOfBounds)?
+                    {
+                        "01" => Type::Developer,
+                        _ => Type::Retail,
+                    },
+                ),
+                d => return Err(InvalidSerialError::InvalidDevicePrefix(d)),
+            },
+        )
+    }
 }
 
-/// An enumeration over the possible errors that can occur when verifying a [`Serial`]
+/// An enumeration over the possible errors that can occur when using a [`Serial`]
 ///
 /// [`Serial`]: ./struct.Serial.html
 #[non_exhaustive]
@@ -260,6 +432,14 @@ pub enum InvalidSerialError {
     /// An error returned when the region is invalid
     #[error("The region portion of your serial is not valid")]
     InvalidRegion(char),
+
+    /// An error returned when the device prefix is invalid
+    #[error("The device prefix portion of your serial is not valid")]
+    InvalidDevicePrefix(char),
+
+    /// An error returned when the serial is missing a check digit
+    #[error("The check digit portion of your serial is missing")]
+    MissingCheckDigit,
 
     /// An error returned when the data being operated upon is too small
     #[error("The provided serial number is not long enough")]
