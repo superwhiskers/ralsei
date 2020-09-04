@@ -25,7 +25,9 @@ use std::{borrow::Cow, fmt, num::ParseIntError};
 use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
 use thiserror::Error;
 
-use crate::model::{certificate::CertificateError, server::Kind as ServerKind};
+use crate::model::{
+    certificate::CertificateError, console::n3ds::Model as N3dsModel, server::Kind as ServerKind,
+};
 
 /// An abstraction over the various console-specific data structures
 ///
@@ -191,6 +193,19 @@ pub enum Model {
     NintendoNew2dsXl,
 }
 
+impl From<N3dsModel> for Model {
+    fn from(model: N3dsModel) -> Self {
+        match model {
+            N3dsModel::Nintendo3ds => Model::Nintendo3ds,
+            N3dsModel::Nintendo3dsXl => Model::Nintendo3dsXl,
+            N3dsModel::Nintendo2ds => Model::Nintendo2ds,
+            N3dsModel::NintendoNew3ds => Model::NintendoNew3ds,
+            N3dsModel::NintendoNew3dsXl => Model::NintendoNew3dsXl,
+            N3dsModel::NintendoNew2dsXl => Model::NintendoNew2dsXl,
+        }
+    }
+}
+
 /// A Nintendo console's serial
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct ConsoleSerial<'a>(pub Cow<'a, str>);
@@ -205,14 +220,14 @@ macro generate_region_length_match($self:ident, $first_yield:expr, $second_yield
 }
 
 macro generate_check_digit_generation_code($serial:ident) {
-    10 - ((((($serial[0] - 48) as u16)
-        + (($serial[2] - 48) as u16)
-        + (($serial[4] - 48) as u16)
-        + (($serial[6] - 48) as u16))
-        + (((($serial[1] - 48) as u16)
-            + (($serial[3] - 48) as u16)
-            + (($serial[5] - 48) as u16)
-            + (($serial[7] - 48) as u16))
+    10 - (((u16::from($serial[0] - 48)
+        + u16::from($serial[2] - 48)
+        + u16::from($serial[4] - 48)
+        + u16::from($serial[6] - 48))
+        + ((u16::from($serial[1] - 48)
+            + u16::from($serial[3] - 48)
+            + u16::from($serial[5] - 48)
+            + u16::from($serial[7] - 48))
             * 3))
         % 10)
 }
@@ -226,7 +241,7 @@ impl ConsoleSerial<'_> {
     /// [`InvalidSerialError`]: ./enum.InvalidSerialError.html
     pub fn verify(&self) -> Result<(), InvalidSerialError> {
         let serial_number = self.number()?.as_bytes();
-        (generate_check_digit_generation_code!(serial_number) == (serial_number[8] - 48) as u16)
+        (generate_check_digit_generation_code!(serial_number) == u16::from(serial_number[8] - 48))
             .then_some(())
             .ok_or(InvalidSerialError::CheckDigitInvalid)
     }
@@ -290,7 +305,7 @@ impl ConsoleSerial<'_> {
             match self
                 .0
                 .chars()
-                .nth(0)
+                .next()
                 .ok_or(InvalidSerialError::OutOfBounds)?
             {
                 'T' | 'V' => Model::NintendoDsi,
@@ -304,6 +319,7 @@ impl ConsoleSerial<'_> {
                 'Y' => Model::NintendoNew3ds,
                 'Q' => Model::NintendoNew3dsXl,
                 'N' => Model::NintendoNew2dsXl,
+                d => return Err(InvalidSerialError::InvalidDevicePrefix(d)),
             },
         )
     }
@@ -317,7 +333,7 @@ impl ConsoleSerial<'_> {
             match self
                 .0
                 .chars()
-                .nth(0)
+                .next()
                 .ok_or(InvalidSerialError::OutOfBounds)?
             {
                 'T' | 'W' | 'Z' | 'F' | 'J' | 'C' | 'S' | 'A' => Type::Retail,
@@ -361,7 +377,7 @@ impl ConsoleSerial<'_> {
             match self
                 .0
                 .chars()
-                .nth(0)
+                .next()
                 .ok_or(InvalidSerialError::OutOfBounds)?
             {
                 'T' => (Model::NintendoDsi, Type::Retail),

@@ -408,10 +408,7 @@ impl<'a> Name<'a> {
     pub fn device_id(&self) -> Option<u32> {
         self.0
             .get(..2)
-            .map_or(false, |prefix| match prefix {
-                "NG" | "CT" => true,
-                _ => false,
-            })
+            .map_or(false, |prefix| matches!(prefix, "NG" | "CT"))
             .then(|| {
                 self.0
                     .get(2..10)

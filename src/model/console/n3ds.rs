@@ -19,11 +19,15 @@
 //! [`Console`]: ../common/trait.Console.html
 //! [`Model`]: ./enum.Model.html
 
-use base64;
 use http::header::{self, HeaderMap, HeaderValue};
 use isocountry::CountryCode;
 use isolanguage_1::LanguageCode;
-use std::borrow::Cow;
+use std::{
+    borrow::Cow,
+    convert::{TryFrom, TryInto},
+    error::Error,
+    fmt,
+};
 use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
 use thiserror::Error;
 
@@ -76,16 +80,51 @@ pub enum Model {
     NintendoNew2dsXl,
 }
 
+impl TryFrom<ConsoleModel> for Model {
+    type Error = ConsoleModelTo3dsModelConversionError;
+
+    /// Attempt to create a [`Model`] from a [`ConsoleModel`]. If an error has occurred, then the
+    /// [`ConsoleModel`] is not a 3ds model
+    ///
+    /// [`Model`]: ./enum.Model.html
+    /// [`ConsoleModel`]: ../common/enum.Model.html
+    fn try_from(model: ConsoleModel) -> Result<Self, Self::Error> {
+        Ok(match model {
+            ConsoleModel::Nintendo3ds => Model::Nintendo3ds,
+            ConsoleModel::Nintendo3dsXl => Model::Nintendo3dsXl,
+            ConsoleModel::Nintendo2ds => Model::Nintendo2ds,
+            ConsoleModel::NintendoNew3ds => Model::NintendoNew3ds,
+            ConsoleModel::NintendoNew3dsXl => Model::NintendoNew3dsXl,
+            ConsoleModel::NintendoNew2dsXl => Model::NintendoNew2dsXl,
+            model => return Err(ConsoleModelTo3dsModelConversionError(model)),
+        })
+    }
+}
+
+/// An error that may occur when converting a [`ConsoleModel`] into a [`Model`]
+///
+/// [`ConsoleModel`]: ../common/enum.Model.html
+/// [`Model`]: ./enum.Model.html
+#[derive(Debug)]
+pub struct ConsoleModelTo3dsModelConversionError(pub ConsoleModel);
+
+impl fmt::Display for ConsoleModelTo3dsModelConversionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "The provided ConsoleModel has no corresponding 3ds Model"
+        )
+    }
+}
+
+impl Error for ConsoleModelTo3dsModelConversionError {}
+
 /// A builder-like type, used to ease in the creation of [`Console3ds`] types
 ///
 /// [`Console3ds`]: ./struct.Console3ds.html
 #[derive(Debug, Default)]
 pub struct Console3dsBuilder<'a> {
     pub(crate) console: Console3ds<'a>,
-}
-
-macro_rules! generate_serial_derivation_method {
-
 }
 
 impl<'a> Console3dsBuilder<'a> {
@@ -96,91 +135,90 @@ impl<'a> Console3dsBuilder<'a> {
         self.console
     }
 
-    /// Sets the [`title_id`] field to the provided [`TitleId`] and derives the [`UniqueId`] from
-    /// it, producing the [`unique_id`] field
+    /// Derives the [`UniqueId`] from the console's current [`TitleId`], producing the
+    /// [`unique_id`] field
     ///
-    /// [`title_id`]: ./struct.Console3ds.html#structfield.title_id
-    /// [`TitleId`]: ../../title/id/struct.TitleId.html
     /// [`UniqueId`]: ../../title/id/struct.UniqueId.html
+    /// [`TitleId`]: ../../title/id/struct.TitleId.html
     /// [`unique_id`]: ./struct.Console3ds.html#structfield.unique_id
-    pub fn title_id_and_unique_id(&mut self, title_id: TitleId) -> &mut Self {
-        self.console.unique_id = Some(title_id.unique_id());
-        self.console.title_id = Some(title_id);
-        self
+    pub fn derive_unique_id_from_title_id(&mut self) -> Result<&mut Self, Console3dsBuilderError> {
+        self.console.unique_id = Some(
+            self.console
+                .title_id
+                .as_ref()
+                .ok_or(Console3dsBuilderError::DeriveableFieldEmpty)?
+                .unique_id(),
+        );
+        Ok(self)
     }
 
-    /// Sets the [`device_certificate`] field to the provided [`Certificate`] and derives the
-    /// device id from it, producing the [`device_id`] field
+    /// Derives the device id from the console's [`Certificate`], producing the [`device_id`] field
     ///
-    /// [`device_certificate`]: ./struct.Console3ds.html#structfield.device_certificate
     /// [`Certificate`]: ../../certificate/struct.Certificate.html
     /// [`device_id`]: ./struct.Console3ds.html#structfield.device_id
-    pub fn device_certificate_and_device_id(
+    pub fn derive_device_id_from_device_certificate(
         &mut self,
-        device_certificate: Certificate<'a>,
-    ) -> &mut Self {
-        self.console.device_id = device_certificate.name.device_id();
-        self.console.device_certificate = Some(device_certificate);
-        self
+    ) -> Result<&mut Self, Console3dsBuilderError> {
+        self.console.device_id = self
+            .console
+            .device_certificate
+            .as_ref()
+            .ok_or(Console3dsBuilderError::DeriveableFieldEmpty)?
+            .name
+            .device_id();
+        Ok(self)
     }
 
-    /// Sets the [`serial`] field to the provided [`ConsoleSerial`] and derives the [`Region`] from
-    /// it, producing the [`region`] field
+    /// Derives the [`Region`] from the console's [`ConsoleSerial`], producing the [`region`] field
     ///
-    /// [`serial`]: ./struct.Console3ds.html#structfield.serial
-    /// [`ConsoleSerial`]: ../common/struct.ConsoleSerial.html
     /// [`Region`]: ../common/enum.Region.html
+    /// [`ConsoleSerial`]: ../common/struct.ConsoleSerial.html
     /// [`region`]: ./struct.Console3ds.html#structfield.region
-    pub fn serial_and_region(
-        &mut self,
-        serial: ConsoleSerial<'a>,
-    ) -> Result<&mut Self, InvalidSerialError> {
-        self.console.region = Some(serial.region()?);
-        self.console.serial = Some(serial);
+    pub fn derive_region_from_serial(&mut self) -> Result<&mut Self, Console3dsBuilderError> {
+        self.console.region = Some(
+            self.console
+                .serial
+                .as_ref()
+                .ok_or(Console3dsBuilderError::DeriveableFieldEmpty)?
+                .region()?,
+        );
         Ok(self)
     }
 
-    /// Sets the [`serial`] field to the provided [`ConsoleSerial`] and derives the [`Model`] from
-    /// it, producing the [`device_model`] field
+    /// Derives the [`Model`] from the console's [`ConsoleSerial`], producing the [`device_model`]
+    /// field
     ///
-    /// [`serial`]: ./struct.Console3ds.html#structfield.serial
-    /// [`ConsoleSerial`]: ../common/struct.ConsoleSerial.html
     /// [`Model`]: ./enum.Model.html
-    /// [`device_model`]: ./struct.Console3ds.html#structfield.device_model
-    pub fn serial_and_device_model(
-        &mut self,
-        serial: ConsoleSerial<'a>,
-    ) -> Result<&mut Self, Console3dsBuilderError> {
-        self.console.device_model = Some(match serial.device()? {
-            (ConsoleModel::Nintendo3ds, _) => Model::Nintendo3ds,
-            (ConsoleModel::Nintendo3dsXl, _) => Model::Nintendo3dsXl,
-            (ConsoleModel::Nintendo2ds, _) => Model::Nintendo2ds,
-            (ConsoleModel::NintendoNew3ds, _) => Model::NintendoNew3ds,
-            (ConsoleModel::NintendoNew3dsXl, _) => Model::NintendoNew3dsXl,
-            (ConsoleModel::NintendoNew2dsXl, _) => Model::NintendoNew2dsXl,
-            (model, _) => return Err(Console3dsBuilderError::UnimplementedConsoleModel(model)),
-        });
-        self.console.serial = Some(serial);
-        Ok(self)
-    }
-
-    /// Sets the [`serial`] field to the provided [`ConsoleSerial`] and derives the [`Type`] from
-    /// it, producing the [`device_type`] field
-    ///
-    /// [`serial`]: ./struct.Console3ds.html#structfield.serial
     /// [`ConsoleSerial`]: ../common/struct.ConsoleSerial.html
-    /// [`Type`]: ../common/enum.Type.html
-    /// [`device_type`]: ./struct.Console3ds.html#structfield.device_type
-    pub fn serial_and_device_type(
-        &mut self,
-        serial: ConsoleSerial<'a>,
-    ) -> Result<&mut Self, Console3dsBuilderError> {
-        self.console.device_type = Some(serial.device()?.1);
-        self.console.serial = Some(serial);
+    /// [`device_model`]: ./struct.Console3ds.html#structfield.device_model
+    pub fn derive_device_model_from_serial(&mut self) -> Result<&mut Self, Console3dsBuilderError> {
+        self.console.device_model = Some(
+            self.console
+                .serial
+                .as_ref()
+                .ok_or(Console3dsBuilderError::DeriveableFieldEmpty)?
+                .device_model()?
+                .try_into()?,
+        );
         Ok(self)
     }
 
-    // pub fn serial_region_and_device_model
+    /// Derives the [`Type`] from the console's [`ConsoleSerial`], producing the [`device_type`]
+    /// field
+    ///
+    /// [`Type`]: ../common/enum.Type.html
+    /// [`ConsoleSerial`]: ../common/struct.ConsoleSerial.html
+    /// [`device_type`]: ./struct.Console3ds.html#structfield.device_type
+    pub fn derive_device_type_from_serial(&mut self) -> Result<&mut Self, Console3dsBuilderError> {
+        self.console.device_type = Some(
+            self.console
+                .serial
+                .as_ref()
+                .ok_or(Console3dsBuilderError::DeriveableFieldEmpty)?
+                .device_type()?,
+        );
+        Ok(self)
+    }
 
     builder_set!("device_type", console, device_type, ConsoleType);
     builder_set!("device_id", console, device_id, u32);
@@ -202,7 +240,6 @@ impl<'a> Console3dsBuilder<'a> {
         Certificate<'a>
     );
     builder_set!("language", console, language, LanguageCode);
-    builder_set!("api_version", console, api_version, u16);
     builder_set!("device_model", console, device_model, Model);
 }
 
@@ -223,7 +260,11 @@ pub enum Console3dsBuilderError {
     ///
     /// [`Serial`]: ../common/struct.Serial.html
     #[error("The provided Serial has a console model has no corresponding 3ds model")]
-    UnimplementedConsoleModel(ConsoleModel),
+    UnimplementedConsoleModel(#[from] ConsoleModelTo3dsModelConversionError),
+
+    /// An error encountered when the field to derive another from has nothing in it
+    #[error("The field to derive from is None")]
+    DeriveableFieldEmpty,
 }
 
 /// A structure containing all possible information that can be used in the mimicking of a 3ds
@@ -286,9 +327,6 @@ pub struct Console3ds<'a> {
 
     /** 3ds-specific */
 
-    /// provides `X-Nintendo-API-Version`
-    pub api_version: Option<u16>,
-
     /// provides `X-Nintendo-Device-Model`
     pub device_model: Option<Model>,
 }
@@ -299,13 +337,15 @@ impl<'a> Console3ds<'a> {
     ///
     /// [`Console3ds`]: ./struct.Console3ds.html
     /// [`Console3dsBuilder`]: ./struct.Console3dsBuilder.html
-    pub fn new<F>(f: F) -> Self
+    pub fn new<F>(f: F) -> Result<Self, Console3dsBuilderError>
     where
-        F: for<'b> FnOnce(&'b mut Console3dsBuilder<'a>) -> &'b mut Console3dsBuilder<'a>,
+        F: for<'b> FnOnce(
+            &'b mut Console3dsBuilder<'a>,
+        ) -> Result<&'b mut Console3dsBuilder<'a>, Console3dsBuilderError>,
     {
         let mut builder = Console3dsBuilder::default();
-        f(&mut builder);
-        builder.build()
+        f(&mut builder)?;
+        Ok(builder.build())
     }
 }
 
@@ -370,10 +410,7 @@ impl<'a> Console<'a> for Console3ds<'_> {
                 }
 
                 let _ = h.append(header::ACCEPT, "*/*".parse()?);
-
-                if let Some(api_version) = self.api_version {
-                    let _ = h.append("X-Nintendo-API-Version", HeaderValue::from(api_version));
-                }
+                let _ = h.append("X-Nintendo-API-Version", "1".parse()?);
 
                 if let Some(fpd_version) = self.fpd_version {
                     let _ = h.append("X-Nintendo-FPD-Version", HeaderValue::from(fpd_version));

@@ -19,11 +19,8 @@ use ralsei::{
     model::{
         certificate::Certificate,
         console::{
-            common::{
-                ConsoleSerial, Environment as DeviceEnvironment, Region as DeviceRegion,
-                Type as DeviceType,
-            },
-            n3ds::{Console3ds, Model as N3dsModel},
+            common::{ConsoleSerial, Environment as DeviceEnvironment},
+            n3ds::Console3ds,
         },
         network::Nnid,
         title::{id::TitleId, version::TitleVersion},
@@ -52,22 +49,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ).get_matches();
 
     let console = Arc::new(RwLock::new(Console3ds::new(|b| {
-        b.device_type(DeviceType::Retail)
-            .device_id(1) // dummy
-            .serial(ConsoleSerial(Cow::Borrowed("1"))) // dummy
+        Ok(b.device_id(1) // dummy
+            .serial(ConsoleSerial(Cow::Borrowed("CW404567772"))) // 3dbrew serial number (at https://www.3dbrew.org/wiki/Serials)
+            .derive_region_from_serial()?
+            .derive_device_model_from_serial()?
+            .derive_device_type_from_serial()?
             .system_version(TitleVersion(0x02D0))
-            .region(DeviceRegion::UnitedStates)
             .country(CountryCode::USA)
             .client_id(Cow::Borrowed("ea25c66c26b403376b4c5ed94ab9cdea"))
             .client_secret(Cow::Borrowed("d137be62cb6a2b831cad8c013b92fb55"))
             .fpd_version(0)
             .environment(DeviceEnvironment::L(1))
-            .title_id_and_unique_id(TitleId(0x000400100002C000))
+            .title_id(TitleId(0x000400100002C000))
+            .derive_unique_id_from_title_id()?
             .title_version(TitleVersion(0003))
-            .language(LanguageCode::En)
-            .api_version(1)
-            .device_model(N3dsModel::Nintendo3ds)
-    })));
+            .language(LanguageCode::En))
+    })?));
 
     let client = Client::new(None, console.clone(), None, None)?;
 
@@ -100,15 +97,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
             println!("re-encoded: {}", base64::encode(cert.to_bytes()?));
         }
-        ("serial", Some(arguments)) => println!(
-            "valid: {:?}",
-            ConsoleSerial(Cow::Borrowed(
+        ("serial", Some(arguments)) => {
+            let serial = ConsoleSerial(Cow::Borrowed(
                 arguments
                     .value_of("SERIAL")
-                    .expect("no serial was provided (this should never happen)")
-            ))
-            .verify()
-        ),
+                    .expect("no serial was provided (this should never happen)"),
+            ));
+            println!("valid: {:?}", serial.verify().is_ok());
+            println!("region: {:?}", serial.region());
+            println!("device model: {:?}", serial.device_model());
+            println!("device type: {:?}", serial.device_type());
+        }
         _ => println!("you shouldn't have done that"),
     }
     Ok(())
