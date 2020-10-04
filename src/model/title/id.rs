@@ -205,6 +205,14 @@ bitflags! {
     }
 }
 
+/// a bitmask for extracting the hardware section of a unique id (the first nibble of the unique
+/// id)
+pub const UNIQUE_ID_HARDWARE_BITMASK: u32 = 0b1111_0000_0000_0000_0000_0000;
+
+/// a bitmask for extracting the identifier section of a bitmask (everything after the first
+/// nibble)
+pub const UNIQUE_ID_IDENTIFIER_BITMASK: u32 = 0b0000_1111_1111_1111_1111_1111;
+
 /// a newtype that defines various operations on
 /// a title id's unique id section
 #[derive(Copy, Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -216,7 +224,7 @@ impl UniqueId {
     /// one
     #[inline]
     pub fn group(self) -> Option<UniqueIdGroup> {
-        match u24::new(0b0000_1111_1111_1111_1111_1111) & self.0 {
+        match u24::new(UNIQUE_ID_IDENTIFIER_BITMASK) & self.0 {
             id if id < u24::new(0x300) => Some(UniqueIdGroup::System),
             id if id < u24::new(0xF8000) => Some(UniqueIdGroup::Application),
             id if id < u24::new(0xFF000) => Some(UniqueIdGroup::Evaluation),
@@ -230,7 +238,7 @@ impl UniqueId {
     /// the corresponding title is new3ds only
     #[inline]
     pub fn is_new3ds_only(self) -> bool {
-        (u24::new(0b1111_0000_0000_0000_0000_0000) & self.0) >> 20 == u24::new(2)
+        (u24::new(UNIQUE_ID_HARDWARE_BITMASK) & self.0) >> 20 == u24::new(2)
     }
 }
 

@@ -210,6 +210,8 @@ impl From<N3dsModel> for Model {
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct ConsoleSerial<'a>(pub Cow<'a, str>);
 
+/// Helper macro to replicate the redundant region length match expression at compile time rather
+/// than run time
 macro generate_region_length_match($self:ident, $first_yield:expr, $second_yield:expr) {
     match $self.region()? {
         Region::Japan | Region::Europe | Region::Australia | Region::Korea | Region::China => {
@@ -219,6 +221,8 @@ macro generate_region_length_match($self:ident, $first_yield:expr, $second_yield
     }
 }
 
+/// Helper macro to replicate the redundant check digit generation code at compile time rather than
+/// run time
 macro generate_check_digit_generation_code($serial:ident) {
     10 - (((u16::from($serial[0] - 48)
         + u16::from($serial[2] - 48)
