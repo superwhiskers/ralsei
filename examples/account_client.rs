@@ -66,7 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .language(LanguageCode::En))
     })?));
 
-    let client = Client::new(None, console.clone(), None, None)?;
+    let client = Client::new(None, console.clone(), None, None, None)?;
 
     match app.subcommand() {
         ("user", Some(arguments)) => println!(

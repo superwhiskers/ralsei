@@ -21,18 +21,23 @@ use native_tls::{
     Certificate, Error as NativeTlsError, Identity, TlsConnector as NativeTlsConnector,
 };
 use parking_lot::RwLock;
-use quick_xml::de::{from_reader as xml_from_reader, DeError as XmlDeError};
-use std::{borrow::Cow, convert::TryFrom, io::BufReader, sync::Arc};
+use quick_xml::Reader as XmlReader;
+use std::{borrow::Cow, convert::TryFrom, sync::Arc};
 use thiserror::Error;
 use tokio_tls::TlsConnector;
 
 use crate::{
+    internal::GLOBAL_BUFFER_POOL,
     keypairs::{CTR_COMMON_1, NINTENDO_CACERTS, WUP_ACCOUNT_1},
     model::{
         console::common::{Console, HeaderConstructionError, Kind as ConsoleKind},
         network::Nnid,
         server::{account_api_endpoints, Kind as ServerKind, DEFAULT_ACCOUNT_SERVER_HOST},
-        xml::error as error_xml,
+        xml::{
+            conversion::{BufferPool, FromXml},
+            error as error_xml,
+            errors::Error as XmlError,
+        },
     },
 };
 
@@ -52,6 +57,14 @@ pub struct Client<'a, C: Console<'a> + Send + Clone> {
     /// This field is used to generate a set of HTTP headers that are passed to the server in
     /// requests to mimic a real console.
     pub console: Arc<RwLock<C>>,
+
+    /// The pool we are storing [`Vec<u8>`]s in.
+    ///
+    /// This is used to speed up XML deserialization by reusing memory as much as possible,
+    /// removing the overhead of memory allocation
+    ///
+    /// [`Vec<u8>`]: https://doc.rust-lang.org/nightly/std/vec/struct.Vec.html
+    pub pool: BufferPool,
 
     /// A cache of the headers to avoid recalling [`Console.http_headers()`]
     ///
@@ -75,6 +88,9 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
     /// If no value for the `cacert_bundle` parameter is provided, it is initialized to the default
     /// (official Nintendo) certificate authority bundle, [`NINTENDO_CACERTS`]
     ///
+    /// If no value for the `pool` parameter is provided, it is initialized to a global pool of
+    /// vectors with a fixed capacity of 100
+    ///
     /// [`Console`]: ../../model/console/common/trait.Console.html
     /// [`host`]: #structfield.host
     /// [`DEFAULT_ACCOUNT_SERVER_HOST`]: ../../model/server/constant.DEFAULT_ACCOUNT_SERVER_HOST.html
@@ -84,11 +100,17 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
         console: Arc<RwLock<C>>,
         identity: Option<Identity>,
         cacert_bundle: Option<Cow<'b, [Certificate]>>,
+        pool: Option<BufferPool>,
     ) -> Result<Self, ClientError> {
         let host = host.unwrap_or(Cow::Borrowed(DEFAULT_ACCOUNT_SERVER_HOST));
         Ok(Client {
             host: RwLock::new(host.clone()),
             console: Arc::clone(&console),
+            pool: if let Some(pool) = pool {
+                pool
+            } else {
+                GLOBAL_BUFFER_POOL.clone()
+            },
             cached_headers: RwLock::new(console.read().http_headers(ServerKind::Account(&host))?),
             http: HttpClient::builder().build(HttpsConnector::from((
                 {
@@ -173,16 +195,22 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
         match response.status().as_u16() {
             200 => Ok(false),
             400 | 401 => {
-                let error = xml_from_reader::<_, error_xml::Errors>(BufReader::new(
-                    response
-                        .into_body()
-                        .try_fold(Vec::new(), |mut accumulator, chunk| async move {
-                            accumulator.extend_from_slice(&chunk);
-                            Ok(accumulator)
-                        })
-                        .await?
-                        .as_slice(),
-                ))?;
+                let mut error = error_xml::Errors::default();
+                error
+                    .from_xml(
+                        &mut XmlReader::from_reader(
+                            response
+                                .into_body()
+                                .try_fold(Vec::new(), |mut accumulator, chunk| async move {
+                                    accumulator.extend_from_slice(&chunk);
+                                    Ok(accumulator)
+                                })
+                                .await?
+                                .as_slice(),
+                        ),
+                        self.pool.clone(),
+                    )
+                    .await?;
                 match error.first_code() {
                     Some(error_xml::ErrorCode::Known(
                         error_xml::ErrorCodeValue::AccountIdExists,
@@ -235,7 +263,7 @@ pub enum ClientError {
 
     /// An error was encountered while deserializing XML
     #[error("An error was encountered while deserializing XML")]
-    XmlDeError(#[from] XmlDeError),
+    XmlError(#[from] XmlError),
 
     /// The Nintendo Network API returned an unknown status code
     #[error("The Nintendo Network API returned an unknown status code, `{0}`")]

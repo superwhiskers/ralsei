@@ -39,6 +39,8 @@
 #![feature(decl_macro)]
 #![feature(concat_idents)]
 #![feature(or_patterns)]
+#![feature(once_cell)]
+#![feature(never_type)]
 
 //pub mod server;
 

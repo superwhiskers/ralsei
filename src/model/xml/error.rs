@@ -7,23 +7,35 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
+use async_trait::async_trait;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::cast::{FromPrimitive, ToPrimitive};
-use serde::{
-    de::{self, Deserializer, Visitor},
-    ser::Serializer,
-    Deserialize, Serialize,
+use quick_xml::{
+    events::{BytesEnd, BytesStart, BytesText, Event},
+    Reader, Writer,
 };
-use std::{error, fmt};
+use std::{
+    borrow::Cow,
+    error, fmt,
+    io::{BufRead, Read, Write},
+    str::FromStr,
+};
+
+use super::{
+    conversion::{
+        generate_xml_field_read_by_propagation, generate_xml_field_write, generate_xml_struct_read_check,
+        generate_xml_field_write_by_propagation, generate_xml_struct_read, BufferPool, FromXml,
+        ToXml,
+    },
+    errors::{Error as XmlError, FormattingError, Result},
+};
 
 /// A representation of a Nintendo Network error xml document
-#[serde(rename = "errors", default)]
-#[derive(Serialize, Deserialize, Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Errors {
     /// A vector of [`Error`] types
     ///
     /// [`Error`]: ./struct.Error.html
-    #[serde(rename = "error", default)]
     pub errors: Vec<Error>,
 }
 
@@ -41,6 +53,47 @@ impl Errors {
     /// [`ErrorCode`]: ./struct.ErrorCode.html
     pub fn first_code(&self) -> Option<&ErrorCode> {
         self.errors.first().map(|v| &v.code)
+    }
+}
+
+#[async_trait]
+impl ToXml for Errors {
+    async fn to_xml<W>(&self, writer: &mut Writer<W>) -> Result<()>
+    where
+        W: Write + Send + Sync,
+    {
+        writer.write_event(Event::Start(BytesStart::borrowed_name(b"errors")))?;
+
+        // loop over the errors within the structure
+        for error in &self.errors {
+            error.to_xml(writer).await?;
+        }
+
+        writer.write_event(Event::End(BytesEnd::borrowed(b"errors")))?;
+
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl FromXml for Errors {
+    async fn from_xml<R>(&mut self, reader: &mut Reader<R>, buffer_pool: BufferPool) -> Result<()>
+    where
+        R: Read + BufRead + Send + Sync,
+    {
+        // read the first event to make sure we're not being fed incorrect data
+        generate_xml_struct_read_check!(b"errors", reader, buffer_pool.clone());
+
+        generate_xml_struct_read!(
+            b"errors",
+            reader, buffer_pool,
+            c,
+            b"error" => {
+                let mut error = Error::default();
+                error.from_xml(reader, buffer_pool.clone()).await?;
+                self.errors.push(error)
+            }
+        )
     }
 }
 
@@ -67,8 +120,7 @@ impl error::Error for Errors {
 }
 
 /// A Nintendo Network account server error
-#[serde(rename = "error", default)]
-#[derive(Serialize, Deserialize, Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Error {
     /// The cause of the error
     pub cause: Option<String>,
@@ -78,6 +130,65 @@ pub struct Error {
 
     /// The error message
     pub message: String,
+}
+
+#[async_trait]
+impl ToXml for Error {
+    async fn to_xml<W>(&self, writer: &mut Writer<W>) -> Result<()>
+    where
+        W: Write + Send + Sync,
+    {
+        writer.write_event(Event::Start(BytesStart::borrowed_name(b"error")))?;
+
+        // the error cause
+        if let Some(ref cause) = &self.cause {
+            generate_xml_field_write!(b"cause", writer, BytesText::from_plain(cause.as_bytes()));
+        }
+
+        // the error code
+        generate_xml_field_write_by_propagation!(b"code", writer, self.code);
+
+        // the message
+        generate_xml_field_write!(
+            b"message",
+            writer,
+            BytesText::from_plain(self.message.as_bytes())
+        );
+
+        writer.write_event(Event::End(BytesEnd::borrowed(b"error")))?;
+
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl FromXml for Error {
+    async fn from_xml<R>(&mut self, reader: &mut Reader<R>, buffer_pool: BufferPool) -> Result<()>
+    where
+        R: Read + BufRead + Send + Sync,
+    {
+        generate_xml_struct_read!(
+            b"error",
+            reader, buffer_pool,
+            c,
+            b"cause" => {
+                self.cause =
+                    Some(reader.read_text(c.name(), &mut *buffer_pool.get().await?)?)
+            },
+            b"code" => {
+                generate_xml_field_read_by_propagation!(
+                    self.code,
+                    reader,
+                    buffer_pool,
+                    b"code"
+                );
+            },
+            b"message" => {
+                self.message =
+                    reader.read_text(c.name(), &mut *buffer_pool.get().await?)?
+            }
+        )
+    }
 }
 
 impl fmt::Display for Error {
@@ -98,24 +209,6 @@ impl error::Error for Error {
     }
 }
 
-/// A Visitor for u16 values
-struct U16Visitor;
-
-impl<'de> Visitor<'de> for U16Visitor {
-    type Value = u16;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        write!(formatter, "an integer between 0 and 2^16-1")
-    }
-
-    fn visit_u16<E>(self, value: u16) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        Ok(value)
-    }
-}
-
 /// A container for a Nintendo Network account server error code, handling unknown values as well
 /// as known ones
 #[derive(thiserror::Error, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -125,6 +218,62 @@ pub enum ErrorCode {
 
     #[error("An unknown error has occurred ({0})")]
     Unknown(u16),
+}
+
+impl ErrorCode {
+    /// Returns an ErrorCode of the provided u16
+    pub fn from_u16(n: u16) -> Self {
+        match ErrorCodeValue::from_u16(n) {
+            Some(known_code) => Self::Known(known_code),
+            None => Self::Unknown(n),
+        }
+    }
+
+    /// Returns the integer representation of the error code
+    pub fn value(&self) -> u16 {
+        match &self {
+            Self::Known(code) => code.to_u16().unwrap_or(0),
+            Self::Unknown(code) => *code,
+        }
+    }
+}
+
+#[async_trait]
+impl ToXml for ErrorCode {
+    async fn to_xml<W>(&self, writer: &mut Writer<W>) -> Result<()>
+    where
+        W: Write + Send + Sync,
+    {
+        // this is almost certainly going to be okay
+        writer.write_event(Event::Text(BytesText::from_escaped_str(Cow::Owned(
+            format!("{:0>4}", self.value()).into(),
+        ))))?;
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl FromXml for ErrorCode {
+    async fn from_xml<R>(&mut self, reader: &mut Reader<R>, buffer_pool: BufferPool) -> Result<()>
+    where
+        R: Read + BufRead + Send + Sync,
+    {
+        match reader.read_event(&mut *buffer_pool.get().await?)? {
+            Event::Text(c) => match u16::from_str(reader.decode(&c.unescaped()?)?) {
+                Ok(c) => {
+                    *self = Self::from_u16(c);
+                    Ok(())
+                },
+                Err(e) => Err(XmlError::Formatting(FormattingError::InvalidValue(
+                    "u16",
+                    Box::new(e),
+                ))),
+            },
+            e => Err(XmlError::Formatting(FormattingError::UnexpectedEvent(
+                format!("{:?}", e),
+            ))),
+        }
+    }
 }
 
 impl Default for ErrorCode {
@@ -190,24 +339,6 @@ impl ToPrimitive for ErrorCode {
             Self::Known(code) => code.to_u16().unwrap_or(0),
             Self::Unknown(code) => *code,
         })
-    }
-}
-
-impl Serialize for ErrorCode {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        Ok(serializer.serialize_u16(self.to_u16().unwrap_or(0))?)
-    }
-}
-
-impl<'de> Deserialize<'de> for ErrorCode {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Ok(Self::from_u16(deserializer.deserialize_u16(U16Visitor)?).unwrap_or(Self::Unknown(0)))
     }
 }
 
@@ -286,6 +417,7 @@ pub enum ErrorCodeValue {
     #[error("This account has been deleted")]
     AccountDeleted = 112,
 
+    // #[error("...")]
     // UnauthorizedDevice = 113, -- according to kinnay's docs, this one also means "unauthorized
     // device" -- yet i already have a variant dedicated to that under code 0104 ??
     #[error("The COPPA agreement has not been accepted")]
@@ -345,10 +477,12 @@ pub enum ErrorCodeValue {
     #[error("The account in use has been temporarily banned from all services")]
     TempbannedAccount = 132,
 
+    // #[error("...")]
     // TempbannedDevice = 0133, ??
     #[error("The account in use has been temporarily banned from this application")]
     TempbannedAccountInApplication = 134,
 
+    // #[error("...")]
     // TempbannedDeviceInApplication = 0135, ??
     #[error("The account in use has been temporarily banned from this NEX service")]
     TempbannedAccountInNexService = 136,
@@ -422,10 +556,10 @@ pub enum ErrorCodeValue {
     #[error("The credit card has been declined")]
     CreditCardDeclined = 1037,
 
-    #[error("The provided credit card number is invalid")] // / these two seem redundant?
-    InvalidCreditCardNumber = 1038, // |
-    // |
-    #[error("The provided credit card number is incorrect")] // /
+    #[error("The provided credit card number is invalid")]
+    InvalidCreditCardNumber = 1038,
+
+    #[error("The provided credit card number is incorrect")]
     WrongCreditCardNumber = 1039,
 
     #[error("The provided credit card date is invalid")]
@@ -434,10 +568,10 @@ pub enum ErrorCodeValue {
     #[error("The provided credit card has been blacklisted")]
     CreditCardBlacklisted = 1041,
 
-    #[error("The provided credit card's pin is invalid")] // / ditto
-    InvalidCreditCardPin = 1042, // |
-    // |
-    #[error("The provided credit card's pin is incorrect")] // /
+    #[error("The provided credit card's pin is invalid")]
+    InvalidCreditCardPin = 1042,
+
+    #[error("The provided credit card's pin is incorrect")]
     WrongCreditCardPin = 1043,
 
     #[error("The provided location is invalid")]

@@ -8,3 +8,6 @@
 //
 
 pub mod error;
+pub mod agreement;
+pub mod errors;
+pub mod conversion;

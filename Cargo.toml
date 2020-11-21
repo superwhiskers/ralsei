@@ -17,15 +17,14 @@ test = true
 [features]
 default = ["client", "mii-renderer"]
 
-client = ["tokio", "quick-xml", "hyper-tls", "futures", "hyper", "tokio-tls", "parking_lot", "native-tls"]
+client = ["tokio", "hyper-tls", "futures", "hyper", "tokio-tls", "parking_lot", "native-tls"]
 mii-renderer = ["vulkano"]
 
 [dependencies]
 thiserror = "^1.0"
-serde = { version = "^1.0", features = ["derive"] }
 num-derive = "^0.3"
 num-traits = "^0.2"
-isolanguage-1 = "^0.1"
+isolanguage-1 = "^0.2"
 isocountry = "^0.2"
 num_x = "^0.2"
 strum = "^0.19"
@@ -33,10 +32,13 @@ strum_macros = "^0.19"
 bitflags = "^1.0"
 http = "^0.2"
 base64 = "^0.12"
+chrono = "^0.4"
+deadpool = "^0.6"
+async-trait = "^0.1"
+quick-xml = "^0.18"
 
 # dependencies needed by client
 tokio = { version = "^0.2", features = ["full"], optional = true }
-quick-xml = { version = "^0.18", features = ["serialize"], optional = true }
 futures = { version = "^0.3", optional = true }
 hyper = { version = "^0.13", optional = true }
 parking_lot = { version = "^0.11", features = ["nightly"], optional = true }
@@ -48,5 +50,4 @@ tokio-tls = { version = "^0.3", optional = true }
 vulkano = { version = "^0.19", optional = true }
 
 [dev-dependencies]
-tokio = { version = "^0.2", features = ["full"] }
 clap = { version = "^2.33", features = ["color"] }
