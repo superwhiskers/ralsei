@@ -23,9 +23,9 @@ use std::{
 
 use super::{
     conversion::{
-        generate_xml_field_read_by_propagation, generate_xml_field_write, generate_xml_struct_read_check,
-        generate_xml_field_write_by_propagation, generate_xml_struct_read, BufferPool, FromXml,
-        ToXml,
+        generate_xml_field_read_by_propagation, generate_xml_field_write,
+        generate_xml_field_write_by_propagation, generate_xml_struct_read,
+        generate_xml_struct_read_check, BufferPool, FromXml, ToXml,
     },
     errors::{Error as XmlError, FormattingError, Result},
 };
@@ -221,7 +221,9 @@ pub enum ErrorCode {
 }
 
 impl ErrorCode {
-    /// Returns an ErrorCode of the provided u16
+    /// Returns an [`ErrorCode`] of the provided u16
+    ///
+    /// [`ErrorCode`]: ./enum.ErrorCode.html
     pub fn from_u16(n: u16) -> Self {
         match ErrorCodeValue::from_u16(n) {
             Some(known_code) => Self::Known(known_code),
@@ -246,7 +248,7 @@ impl ToXml for ErrorCode {
     {
         // this is almost certainly going to be okay
         writer.write_event(Event::Text(BytesText::from_escaped_str(Cow::Owned(
-            format!("{:0>4}", self.value()).into(),
+            format!("{:0>4}", self.value()),
         ))))?;
         Ok(())
     }
@@ -263,7 +265,7 @@ impl FromXml for ErrorCode {
                 Ok(c) => {
                     *self = Self::from_u16(c);
                     Ok(())
-                },
+                }
                 Err(e) => Err(XmlError::Formatting(FormattingError::InvalidValue(
                     "u16",
                     Box::new(e),

@@ -30,7 +30,7 @@ pub enum Error {
     /// An error that may arise while parsing bytes as UTF-8
     #[error("An error was encountered while parsing bytes as UTF-8")]
     Utf8Error(#[from] Utf8Error),
-    
+
     /// An error that may arise while creating a [`String`] from a [`Vec`]
     ///
     /// [`String`]: https://doc.rust-lang.org/nightly/std/string/struct.String.html

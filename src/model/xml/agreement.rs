@@ -7,9 +7,9 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
+use chrono::{offset::Utc, DateTime};
 use isocountry::CountryCode;
 use isolanguage_1::LanguageCode;
-use chrono::{DateTime, offset::Utc};
 
 //TODO(superwhiskers): hook this into the custom serialization/deserialization infrastructure
 
@@ -35,7 +35,6 @@ pub struct Agreement {
 
     /// The date at which this specific agreement was published, formatted as specified by iso 8601
     pub publish_date: Option<DateTime<Utc>>,
-
     // /// The text to show on the "accept" button
-    // pub accept: 
+    // pub accept:
 }

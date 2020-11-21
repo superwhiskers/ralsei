@@ -14,13 +14,13 @@ use quick_xml::{
     Reader, Writer,
 };
 use std::{
-    str,
+    borrow::Cow,
     io::{BufRead, Read, Write},
     result::Result as StdResult,
-    borrow::Cow,
+    str,
 };
 
-use super::errors::{Result, Error, FormattingError};
+use super::errors::{Error, FormattingError, Result};
 
 /// The [`Manager`] implementation used by [`Pool`]s that are passed to implementors of [`FromXml`]
 ///
@@ -82,7 +82,7 @@ where
 /// implementation
 ///
 /// [`FromXml`]: ./trait.FromXml.html
-pub async fn from_string<'a, T>(value: Cow<'a, str>, buffer_pool: &mut BufferPool) -> Result<T>
+pub async fn from_string<T>(value: Cow<'_, str>, buffer_pool: &mut BufferPool) -> Result<T>
 where
     T: FromXml + Default,
 {
@@ -120,11 +120,9 @@ pub(crate) macro generate_xml_field_read_by_propagation($container:expr, $reader
     let event = $reader.read_event(&mut *buffer)?;
     if let Event::End(c) = event {
         if c.name() != $name {
-            return Err(Error::Formatting(
-                FormattingError::UnexpectedClosingTag(
-                    str::from_utf8(c.name())?.to_string(),
-                ),
-            ));
+            return Err(Error::Formatting(FormattingError::UnexpectedClosingTag(
+                str::from_utf8(c.name())?.to_string(),
+            )));
         }
     } else {
         return Err(Error::Formatting(FormattingError::UnexpectedEvent(
@@ -144,7 +142,7 @@ pub(crate) macro generate_xml_struct_read_check($name:expr, $reader:ident, $buff
                     str::from_utf8(c.name())?.to_string(),
                 )));
             }
-            break
+            break;
         } else if let Event::End(c) = event {
             return Err(Error::Formatting(FormattingError::UnexpectedClosingTag(
                 str::from_utf8(c.name())?.to_string(),
