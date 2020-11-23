@@ -38,7 +38,7 @@ async-trait = "^0.1"
 quick-xml = "^0.18"
 
 # dependencies needed by client
-tokio = { version = "^0.2", features = ["full"], optional = true }
+tokio = { version = "^0.3", features = ["full"], optional = true }
 futures = { version = "^0.3", optional = true }
 hyper = { version = "^0.13", optional = true }
 parking_lot = { version = "^0.11", features = ["nightly"], optional = true }
