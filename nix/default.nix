@@ -7,5 +7,4 @@ import sources.nixpkgs {
   overlays = [
     mozilla-overlay
   ];
-  config = {};
 }

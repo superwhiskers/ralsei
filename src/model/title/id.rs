@@ -256,3 +256,107 @@ pub enum UniqueIdGroup {
 /// variation segment
 #[derive(Copy, Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Variation(pub u8);
+
+#[cfg(test)]
+mod test {
+    use std::lazy::Lazy;
+
+    use super::*;
+
+    macro generate_derivation_test($tname:ident, $left:expr, $fn:ident, $right:expr) {
+        #[test]
+        fn $tname() {
+            assert_eq!($left.$fn(), $right);
+        }
+    }
+
+    macro generate_fallible_derivation_test($tname:ident, $left:expr, $fn:ident, $right:expr) {
+        #[test]
+        fn $tname() {
+            assert_eq!($left.$fn().unwrap(), $right);
+        }
+    }
+
+    const MSET_TITLE_ID: TitleId = TitleId(0x0004001000020000);
+    const MSET_TITLE_ID_HIGH: TitleIdHigh = TitleIdHigh(0x00040010);
+    const MSET_TITLE_ID_LOW: TitleIdLow = TitleIdLow(0x00020000);
+    const MSET_TITLE_ID_PLATFORM: Platform = Platform::Nintendo3ds;
+    const MSET_TITLE_ID_CATEGORY: Category = Category::SYSTEM;
+    const MSET_TITLE_ID_UNIQUE_ID: Lazy<UniqueId> =
+        Lazy::new(|| UniqueId(u24::new(0x000200 as u32)));
+    const MSET_TITLE_ID_VARIATION: Variation = Variation(0x0);
+    const MSET_TITLE_ID_UNIQUE_ID_GROUP: UniqueIdGroup = UniqueIdGroup::System;
+
+    #[test]
+    fn titleid_from_high_and_low() {
+        assert_eq!(
+            TitleId::from_high_and_low(MSET_TITLE_ID_HIGH, MSET_TITLE_ID_LOW),
+            MSET_TITLE_ID
+        );
+    }
+
+    #[test]
+    fn titleid_from_segments() {
+        assert_eq!(
+            TitleId::from_segments(
+                MSET_TITLE_ID_PLATFORM,
+                MSET_TITLE_ID_CATEGORY,
+                *MSET_TITLE_ID_UNIQUE_ID,
+                MSET_TITLE_ID_VARIATION,
+            ),
+            MSET_TITLE_ID
+        );
+    }
+
+    generate_fallible_derivation_test!(
+        titleid_platform,
+        MSET_TITLE_ID,
+        platform,
+        MSET_TITLE_ID_PLATFORM
+    );
+    generate_fallible_derivation_test!(
+        titleid_category,
+        MSET_TITLE_ID,
+        category,
+        MSET_TITLE_ID_CATEGORY
+    );
+    generate_derivation_test!(
+        titleid_unique_id,
+        MSET_TITLE_ID,
+        unique_id,
+        *MSET_TITLE_ID_UNIQUE_ID
+    );
+    generate_derivation_test!(
+        titleid_variation,
+        MSET_TITLE_ID,
+        variation,
+        MSET_TITLE_ID_VARIATION
+    );
+    generate_derivation_test!(titleid_high, MSET_TITLE_ID, high, MSET_TITLE_ID_HIGH);
+    generate_derivation_test!(titleid_low, MSET_TITLE_ID, low, MSET_TITLE_ID_LOW);
+
+    #[test]
+    fn titleid_high_from_platform_and_category() {
+        assert_eq!(
+            TitleIdHigh::from_platform_and_category(MSET_TITLE_ID_PLATFORM, MSET_TITLE_ID_CATEGORY),
+            MSET_TITLE_ID_HIGH
+        );
+    }
+
+    generate_fallible_derivation_test!(titleid_high_platform, MSET_TITLE_ID_HIGH, platform, MSET_TITLE_ID_PLATFORM);
+    generate_fallible_derivation_test!(titleid_high_category, MSET_TITLE_ID_HIGH, category, MSET_TITLE_ID_CATEGORY);
+
+    #[test]
+    fn titleid_low_from_unique_id_and_variation() {
+        assert_eq!(
+            TitleIdLow::from_unique_id_and_variation(*MSET_TITLE_ID_UNIQUE_ID, MSET_TITLE_ID_VARIATION),
+            MSET_TITLE_ID_LOW
+        );
+    }
+
+    generate_derivation_test!(titleid_low_unique_id, MSET_TITLE_ID_LOW, unique_id, *MSET_TITLE_ID_UNIQUE_ID);
+    generate_derivation_test!(titleid_low_variation, MSET_TITLE_ID_LOW, variation, MSET_TITLE_ID_VARIATION);
+
+    generate_fallible_derivation_test!(unique_id_group, MSET_TITLE_ID_UNIQUE_ID, group, MSET_TITLE_ID_UNIQUE_ID_GROUP);
+    generate_derivation_test!(unique_id_is_new_3ds_only, MSET_TITLE_ID_UNIQUE_ID, is_new3ds_only, false);
+}

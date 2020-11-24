@@ -27,18 +27,18 @@ num-traits = "^0.2"
 isolanguage-1 = "^0.2"
 isocountry = "^0.2"
 num_x = "^0.2"
-strum = "^0.19"
+strum = "^0.20"
 strum_macros = "^0.19"
 bitflags = "^1.0"
 http = "^0.2"
-base64 = "^0.12"
+base64 = "^0.13"
 chrono = "^0.4"
 deadpool = "^0.6"
 async-trait = "^0.1"
-quick-xml = "^0.18"
+quick-xml = "^0.20"
 
 # dependencies needed by client
-tokio = { version = "^0.2", features = ["full"], optional = true }
+tokio = { version = "^0.3", features = ["full"], optional = true }
 futures = { version = "^0.3", optional = true }
 hyper = { version = "^0.13", optional = true }
 parking_lot = { version = "^0.11", features = ["nightly"], optional = true }
