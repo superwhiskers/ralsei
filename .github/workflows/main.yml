@@ -32,7 +32,7 @@ jobs:
           command: clippy
           args: --all-features --      
   test:
-    name: run tests, benchmarks, and get code coverage
+    name: get code coverage
     runs-on: ubuntu-latest
     steps:
     - name: checkout source code
@@ -43,20 +43,6 @@ jobs:
         profile: minimal
         toolchain: nightly
         override: true
-    - name: run tests
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --workspace -vv 
-    - name: run benchmarks
-      uses: actions-rs/cargo@v1
-      with:
-        command: bench
-        args: --workspace -vv
-    - name: clean workspace
-      uses: actions-rs/cargo@v1
-      with:
-        command: clean
     - name: get code coverage
       id: coverage
       uses: actions-rs/tarpaulin@v0.1
