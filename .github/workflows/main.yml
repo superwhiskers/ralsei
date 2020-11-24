@@ -57,23 +57,9 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: clean
-    - name: install grcov
-      uses: actions-rs/install@v0.1
-      with:
-        crate: grcov
-        version: latest
-    - name: run tests required to get coverage information
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --no-fail-fast
-      env:
-        CARGO_INCREMENTAL: '0'
-        RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
-        RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
     - name: get code coverage
       id: coverage
-      uses: actions-rs/grcov@v0.1
+      uses: actions-rs/tarpaulin@v0.1
     - name: upload coverage report to codecov
       uses: codecov/codecov-action@v1
       with:

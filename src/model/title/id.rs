@@ -343,20 +343,53 @@ mod test {
         );
     }
 
-    generate_fallible_derivation_test!(titleid_high_platform, MSET_TITLE_ID_HIGH, platform, MSET_TITLE_ID_PLATFORM);
-    generate_fallible_derivation_test!(titleid_high_category, MSET_TITLE_ID_HIGH, category, MSET_TITLE_ID_CATEGORY);
+    generate_fallible_derivation_test!(
+        titleid_high_platform,
+        MSET_TITLE_ID_HIGH,
+        platform,
+        MSET_TITLE_ID_PLATFORM
+    );
+    generate_fallible_derivation_test!(
+        titleid_high_category,
+        MSET_TITLE_ID_HIGH,
+        category,
+        MSET_TITLE_ID_CATEGORY
+    );
 
     #[test]
     fn titleid_low_from_unique_id_and_variation() {
         assert_eq!(
-            TitleIdLow::from_unique_id_and_variation(*MSET_TITLE_ID_UNIQUE_ID, MSET_TITLE_ID_VARIATION),
+            TitleIdLow::from_unique_id_and_variation(
+                *MSET_TITLE_ID_UNIQUE_ID,
+                MSET_TITLE_ID_VARIATION
+            ),
             MSET_TITLE_ID_LOW
         );
     }
 
-    generate_derivation_test!(titleid_low_unique_id, MSET_TITLE_ID_LOW, unique_id, *MSET_TITLE_ID_UNIQUE_ID);
-    generate_derivation_test!(titleid_low_variation, MSET_TITLE_ID_LOW, variation, MSET_TITLE_ID_VARIATION);
+    generate_derivation_test!(
+        titleid_low_unique_id,
+        MSET_TITLE_ID_LOW,
+        unique_id,
+        *MSET_TITLE_ID_UNIQUE_ID
+    );
+    generate_derivation_test!(
+        titleid_low_variation,
+        MSET_TITLE_ID_LOW,
+        variation,
+        MSET_TITLE_ID_VARIATION
+    );
 
-    generate_fallible_derivation_test!(unique_id_group, MSET_TITLE_ID_UNIQUE_ID, group, MSET_TITLE_ID_UNIQUE_ID_GROUP);
-    generate_derivation_test!(unique_id_is_new_3ds_only, MSET_TITLE_ID_UNIQUE_ID, is_new3ds_only, false);
+    generate_fallible_derivation_test!(
+        unique_id_group,
+        MSET_TITLE_ID_UNIQUE_ID,
+        group,
+        MSET_TITLE_ID_UNIQUE_ID_GROUP
+    );
+    generate_derivation_test!(
+        unique_id_is_new_3ds_only,
+        MSET_TITLE_ID_UNIQUE_ID,
+        is_new3ds_only,
+        false
+    );
 }
