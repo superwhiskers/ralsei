@@ -381,10 +381,34 @@ mod test {
     );
 
     generate_fallible_derivation_test!(
-        unique_id_group,
+        unique_id_system_group,
         MSET_TITLE_ID_UNIQUE_ID,
         group,
         MSET_TITLE_ID_UNIQUE_ID_GROUP
+    );
+    generate_fallible_derivation_test!(
+        unique_id_application_group,
+        UniqueId(u24::new(0xC0F44)),
+        group,
+        UniqueIdGroup::Application
+    );
+    generate_fallible_derivation_test!(
+        unique_id_evaluation_group,
+        UniqueId(u24::new(0xF9426)),
+        group,
+        UniqueIdGroup::Evaluation
+    );
+    generate_fallible_derivation_test!(
+        unique_id_prototype_group,
+        UniqueId(u24::new(0xFF327)),
+        group,
+        UniqueIdGroup::Prototype
+    );
+    generate_fallible_derivation_test!(
+        unique_id_developer_group,
+        UniqueId(u24::new(0xFF496)),
+        group,
+        UniqueIdGroup::Developer
     );
     generate_derivation_test!(
         unique_id_is_new_3ds_only,
