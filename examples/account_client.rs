@@ -46,6 +46,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             (about: "parse a serial number and display as much information about it as possible")
             (@arg SERIAL: +required "the serial to parse")
         )
+        (@subcommand titleid =>
+            (about: "parse a title id and display as much information about it as possible")
+            (@arg TITLE_ID: +required "the title id to parse, in hexadecimal format (without the `0x` prefix)")
+        )
     ).get_matches();
 
     let console = Arc::new(RwLock::new(Console3ds::new(|b| {
@@ -107,6 +111,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("region: {:?}", serial.region());
             println!("device model: {:?}", serial.device_model());
             println!("device type: {:?}", serial.device_type());
+        }
+        ("titleid", Some(arguments)) => {
+            let title_id = TitleId(u64::from_str_radix(
+                arguments
+                    .value_of("TITLE_ID")
+                    .expect("no title id was provided (this never should happen)"),
+                16
+            )?);
+            let unique_id = title_id.unique_id();
+            println!("platform: {:?}", title_id.platform());
+            println!("category: {:?}", title_id.category());
+            println!("part of the normal category: {:?}", title_id.category().map(|c| c.is_normal()));
+            println!("unique id: {:?}", unique_id);
+            println!("variation: {:?}", title_id.variation());
+            println!("new3ds only: {}", unique_id.is_new3ds_only());
+            println!("unique id group: {:?}", unique_id.group());
         }
         _ => println!("you shouldn't have done that"),
     }

@@ -51,3 +51,17 @@ impl TitleVersion {
         u4::new((self.0 & MICRO_VERSION_BITMASK) as u8)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    //TODO(superwhiskers): finish this
+    /*
+    #[test]
+    fn title_version_from_segments() {
+        assert_eq!(
+            TitleVersion::from_segments(u6::new
+    }
+    */
+}
