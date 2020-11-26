@@ -7,8 +7,8 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
-//! Type definitions and operations for the title id construct that many Nintendo consoles use as a
-//! means of identification of specific titles
+//! Type definitions and operations for the title id construct that many Nintendo cansolse use as a
+//! means of distinguishing titles from ane another
 //!
 //! Specifically, this module contains the [`TitleId`] tuple struct, which has multiple methods
 //! defined on it for pulling more specific sections out of it as well as constructing it from
