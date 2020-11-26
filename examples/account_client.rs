@@ -117,12 +117,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 arguments
                     .value_of("TITLE_ID")
                     .expect("no title id was provided (this never should happen)"),
-                16
+                16,
             )?);
             let unique_id = title_id.unique_id();
             println!("platform: {:?}", title_id.platform());
             println!("category: {:?}", title_id.category());
-            println!("part of the normal category: {:?}", title_id.category().map(|c| c.is_normal()));
+            println!(
+                "part of the normal category: {:?}",
+                title_id.category().map(|c| c.is_normal())
+            );
             println!("unique id: {:?}", unique_id);
             println!("variation: {:?}", title_id.variation());
             println!("new3ds only: {}", unique_id.is_new3ds_only());

@@ -1,5 +1,6 @@
 //
 // ralsei - fast nintendo library in rust
+//
 // copyright (c) 2020 superwhiskers <whiskerdev@protonmail.com>
 // this source code form is subject to the terms of the mozilla public
 // license, v. 2.0. if a copy of the mpl was not distributed with this
@@ -188,7 +189,7 @@ pub const TIDHIGH_PLATFORM_BITMASK: u32 = 0b1111_1111_1111_1111_0000_0000_0000_0
 pub const TIDHIGH_CATEGORY_BITMASK: u32 = 0b0000_0000_0000_0000_1111_1111_1111_1111;
 
 /// The higher portion of a [`TitleId`]
-/// 
+///
 /// It is composed of both a [`Platform`] and [`Category`] segment.
 ///
 /// [`TitleId`]: ./struct.TitleId.html
@@ -545,12 +546,7 @@ mod test {
         MSET_TITLE_ID_VARIATION
     );
 
-    generate_derivation_test!(
-        category_is_normal,
-        MSET_TITLE_ID_CATEGORY,
-        is_normal,
-        true
-    );
+    generate_derivation_test!(category_is_normal, MSET_TITLE_ID_CATEGORY, is_normal, true);
 
     generate_fallible_derivation_test!(
         unique_id_system_group,
