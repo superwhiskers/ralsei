@@ -24,7 +24,7 @@ use parking_lot::RwLock;
 use quick_xml::Reader as XmlReader;
 use std::{borrow::Cow, convert::TryFrom, sync::Arc};
 use thiserror::Error;
-use tokio_tls::TlsConnector;
+use tokio_native_tls::TlsConnector;
 
 use crate::{
     internal::GLOBAL_BUFFER_POOL,

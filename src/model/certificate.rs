@@ -70,18 +70,16 @@ impl<'a> Certificate<'a> {
     pub fn to_bytes(&self) -> Result<Vec<u8>, CertificateError> {
         let mut certificate = Vec::new();
 
-        macro_rules! signature_match_clause {
-            ($signature_kind:ident, $signature_data:ident, $padding_size:literal) => {{
-                certificate.extend(
-                    &SignatureMagic::$signature_kind
-                        .to_u32()
-                        .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE)
-                        .to_be_bytes(),
-                );
-                certificate.extend($signature_data.as_ref());
-                certificate.extend([0; $padding_size].as_ref());
-            }};
-        }
+        macro signature_match_clause($signature_kind:ident, $signature_data:ident, $padding_size:literal) {{
+            certificate.extend(
+                &SignatureMagic::$signature_kind
+                    .to_u32()
+                    .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE)
+                    .to_be_bytes(),
+            );
+            certificate.extend($signature_data.as_ref());
+            certificate.extend([0; $padding_size].as_ref());
+        }}
 
         match &self.signature {
             Signature::Rsa4096WithSha1(signature) => {
@@ -110,24 +108,22 @@ impl<'a> Certificate<'a> {
             certificate.resize(len + 0x40, 0);
         }
 
-        macro_rules! key_match_clause {
-            ($key_kind:ident, $key_data:ident, $padding_size:literal) => {{
-                certificate.extend(
-                    &KeyMagic::$key_kind
-                        .to_u32()
-                        .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE)
-                        .to_be_bytes(),
-                );
-                {
-                    let len = certificate.len();
-                    certificate.extend(self.name.0.as_ref().bytes());
-                    certificate.resize(len + 0x40, 0);
-                }
-                certificate.extend(&self.key_id.0.to_be_bytes());
-                certificate.extend($key_data.as_ref());
-                certificate.extend([0; $padding_size].as_ref());
-            }};
-        }
+        macro key_match_clause($key_kind:ident, $key_data:ident, $padding_size:literal) {{
+            certificate.extend(
+                &KeyMagic::$key_kind
+                    .to_u32()
+                    .expect(Self::CSTYLE_ENUM_TO_U32_PANIC_MESSAGE)
+                    .to_be_bytes(),
+            );
+            {
+                let len = certificate.len();
+                certificate.extend(self.name.0.as_ref().bytes());
+                certificate.resize(len + 0x40, 0);
+            }
+            certificate.extend(&self.key_id.0.to_be_bytes());
+            certificate.extend($key_data.as_ref());
+            certificate.extend([0; $padding_size].as_ref());
+        }};
 
         match &self.key {
             Key::Rsa4096(key) => key_match_clause!(Rsa4096, key, 0x34),
@@ -154,18 +150,16 @@ impl TryFrom<&[u8]> for Certificate<'_> {
                 .expect(Self::SLICE_TO_ARRAY_PANIC_MESSAGE),
         );
 
-        macro_rules! signature_magic_match_clause {
-            ($signature_kind:ident, $signature_limit:literal, $padding_end:literal) => {
-                (
-                    Signature::$signature_kind(Cow::Owned(
-                        value
-                            .get(0x4..$signature_limit)
-                            .ok_or(CertificateError::OutOfBounds)?
-                            .to_owned(),
-                    )),
-                    $padding_end,
-                )
-            };
+        macro signature_magic_match_clause($signature_kind:ident, $signature_limit:literal, $padding_end:literal) {
+            (
+                Signature::$signature_kind(Cow::Owned(
+                    value
+                        .get(0x4..$signature_limit)
+                        .ok_or(CertificateError::OutOfBounds)?
+                        .to_owned(),
+                )),
+                $padding_end,
+            )
         }
 
         let (signature, offset) = match SignatureMagic::from_u32(signature_type)
@@ -212,15 +206,13 @@ impl TryFrom<&[u8]> for Certificate<'_> {
                 .expect(Self::SLICE_TO_ARRAY_PANIC_MESSAGE),
         );
 
-        macro_rules! key_magic_match_clause {
-            ($key_kind:ident, $key_limit:literal) => {
-                Key::$key_kind(Cow::Owned(
-                    value
-                        .get(offset + 0x88..offset + $key_limit)
-                        .ok_or(CertificateError::OutOfBounds)?
-                        .to_owned(),
-                ))
-            };
+        macro key_magic_match_clause($key_kind:ident, $key_limit:literal) {
+            Key::$key_kind(Cow::Owned(
+                value
+                    .get(offset + 0x88..offset + $key_limit)
+                    .ok_or(CertificateError::OutOfBounds)?
+                    .to_owned(),
+            ))
         }
 
         let key = match KeyMagic::from_u32(key_type)

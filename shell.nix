@@ -1,11 +1,14 @@
-{ sources ? import ./nix/sources.nix
-, pkgs ? import ./nix { inherit sources; } }:
+{ sources ? import ./nix/sources.nix, pkgs ? import ./nix { inherit sources; }
+}:
 
 pkgs.mkShell {
   name = "ralsei-shell";
 
   buildInputs = with pkgs; [
-    latest.rustChannels.nightly.rust
+    ((rustChannelOf {
+      date = "2020-11-25";
+      channel = "nightly";
+    }).rust.override { extensions = [ "rustfmt-preview" "clippy-preview" ]; })
     openssl
     pkg-config
     niv

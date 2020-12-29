@@ -14,9 +14,9 @@
 //! defined on it for pulling more specific sections out of it as well as constructing it from
 //! existing sections.
 //!
-//! This specific implementation is designed to be used for the 3DS and Wii U consoles. While it
-//! may work on older consoles, it was not designed for them. Do not be surprised if it doesn't
-//! handle the title ids of other Nintendo consoles properly.
+//! This specific title id implementation is designed to be used for title ids as implemented on
+//! the 3DS and Wii U. While it may work for title ids from other Nintendo consoles, it was not
+//! designed to do so. Do not be surprised if it doesn't handle such title ids properly.
 //!
 //! # Basic usage
 //!
