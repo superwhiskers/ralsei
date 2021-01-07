@@ -123,7 +123,7 @@ impl<'a> Certificate<'a> {
             certificate.extend(&self.key_id.0.to_be_bytes());
             certificate.extend($key_data.as_ref());
             certificate.extend([0; $padding_size].as_ref());
-        }};
+        }}
 
         match &self.key {
             Key::Rsa4096(key) => key_match_clause!(Rsa4096, key, 0x34),
