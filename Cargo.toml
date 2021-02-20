@@ -11,5 +11,9 @@ members = [
   # "protocol/prudp-v1",
   # "protocol/prudp-lite",
 
-  # "examples",
+  "examples/account-client",
 ]
+
+[profile.release]
+opt-level = 3
+lto = "fat"

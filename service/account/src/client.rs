@@ -26,7 +26,6 @@ use std::{borrow::Cow, convert::TryFrom, sync::Arc};
 use thiserror::Error;
 use tokio_native_tls::TlsConnector;
 
-// TODO(superwhiskers): fix imports :3
 use crate::{
     common::{account_api_endpoints, DEFAULT_ACCOUNT_SERVER_HOST},
     xml::error as error_xml,

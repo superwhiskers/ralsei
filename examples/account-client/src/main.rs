@@ -14,18 +14,16 @@ use isolanguage_1::LanguageCode;
 use parking_lot::RwLock;
 use std::{borrow::Cow, convert::TryFrom, sync::Arc};
 
-use ralsei::{
-    client::account::Client,
-    model::{
-        certificate::Certificate,
-        console::{
-            common::{ConsoleSerial, Environment as DeviceEnvironment},
-            n3ds::Console3ds,
-        },
-        network::Nnid,
-        title::{id::TitleId, version::TitleVersion},
+use ralsei_model::{
+    certificate::Certificate,
+    console::{
+        common::{ConsoleSerial, Environment as DeviceEnvironment},
+        n3ds::Console3ds,
     },
+    network::Nnid,
+    title::{id::TitleId, version::TitleVersion},
 };
+use ralsei_service_account::client::Client;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
