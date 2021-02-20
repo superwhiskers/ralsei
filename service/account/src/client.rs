@@ -26,19 +26,21 @@ use std::{borrow::Cow, convert::TryFrom, sync::Arc};
 use thiserror::Error;
 use tokio_native_tls::TlsConnector;
 
+// TODO(superwhiskers): fix imports :3
 use crate::{
-    internal::GLOBAL_BUFFER_POOL,
-    keypairs::{CTR_COMMON_1, NINTENDO_CACERTS, WUP_ACCOUNT_1},
-    model::{
-        console::common::{Console, HeaderConstructionError, Kind as ConsoleKind},
-        network::Nnid,
-        server::{account_api_endpoints, Kind as ServerKind, DEFAULT_ACCOUNT_SERVER_HOST},
-        xml::{
-            conversion::{BufferPool, FromXml},
-            error as error_xml,
-            errors::Error as XmlError,
-        },
-    },
+    common::{account_api_endpoints, DEFAULT_ACCOUNT_SERVER_HOST},
+    xml::error as error_xml,
+};
+use ralsei_keypairs::{CTR_COMMON_1, NINTENDO_CACERTS, WUP_ACCOUNT_1};
+use ralsei_model::{
+    console::common::{Console, HeaderConstructionError, Kind as ConsoleKind},
+    network::Nnid,
+    server::Kind as ServerKind,
+};
+use ralsei_util::xml::{
+    errors::Error as XmlError,
+    framework::{BufferPool, FromXml},
+    GLOBAL_BUFFER_POOL,
 };
 
 /// A client for the Nintendo Network account servers
@@ -127,6 +129,7 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
                         match console.read().kind() {
                             ConsoleKind::N3ds => Identity::from_pkcs12(CTR_COMMON_1, "ralsei")?,
                             ConsoleKind::WiiU => Identity::from_pkcs12(WUP_ACCOUNT_1, "ralsei")?,
+                            kind => return Err(ClientError::UnsupportedConsoleKind(kind)),
                         }
                     });
 
@@ -247,7 +250,7 @@ pub enum ClientError {
 
     /// An error encountered if the Nintendo Network API raises an error
     #[error("An error was encountered while using the Nintendo Network account API")]
-    ErrorXml(#[from] error_xml::Errors),
+    ErrorXml(#[from] error_xml::Errors<'static>), // TODO(superwhiskers): look into the necessity of this
 
     /// An error was encountered while using hyper
     #[error("An error was encountered while using the `hyper` library")]

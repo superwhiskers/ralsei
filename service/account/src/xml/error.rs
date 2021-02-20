@@ -21,25 +21,26 @@ use std::{
     str::FromStr,
 };
 
-use super::{
-    conversion::{
+use ralsei_util::xml::{
+    errors::{Error as XmlError, FormattingError, Result},
+    framework::{BufferPool, FromXml, ToXml},
+    helpers::{
         generate_xml_field_read_by_propagation, generate_xml_field_write,
         generate_xml_field_write_by_propagation, generate_xml_struct_read,
-        generate_xml_struct_read_check, BufferPool, FromXml, ToXml,
+        generate_xml_struct_read_check,
     },
-    errors::{Error as XmlError, FormattingError, Result},
 };
 
 /// A representation of a Nintendo Network error xml document
 #[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-pub struct Errors {
+pub struct Errors<'a> {
     /// A vector of [`Error`] types
     ///
     /// [`Error`]: ./struct.Error.html
-    pub errors: Vec<Error>,
+    pub errors: Vec<Error<'a>>,
 }
 
-impl Errors {
+impl<'a> Errors<'a> {
     /// Returns the first [`Error`] or `None` if there are none
     ///
     /// [`Error`]: ./struct.Error.html
@@ -57,7 +58,7 @@ impl Errors {
 }
 
 #[async_trait]
-impl ToXml for Errors {
+impl<'a> ToXml for Errors<'a> {
     async fn to_xml<W>(&self, writer: &mut Writer<W>) -> Result<()>
     where
         W: Write + Send + Sync,
@@ -76,7 +77,7 @@ impl ToXml for Errors {
 }
 
 #[async_trait]
-impl FromXml for Errors {
+impl<'a> FromXml for Errors<'a> {
     async fn from_xml<R>(&mut self, reader: &mut Reader<R>, buffer_pool: BufferPool) -> Result<()>
     where
         R: Read + BufRead + Send + Sync,
@@ -97,7 +98,7 @@ impl FromXml for Errors {
     }
 }
 
-impl fmt::Display for Errors {
+impl<'a> fmt::Display for Errors<'a> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         // here, we assume that there is only one error present. this presumption has held true in
         // all known cases, so we believe that there is no need to handle the edge case of there
@@ -105,12 +106,15 @@ impl fmt::Display for Errors {
         if let Some(error) = self.errors.get(0) {
             error.fmt(formatter)
         } else {
-            write!(formatter, "No error has arised")
+            write!(
+                formatter,
+                "An error xml was parsed but no errors were in the body"
+            )
         }
     }
 }
 
-impl error::Error for Errors {
+impl error::Error for Errors<'static> {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         // ditto
         self.errors
@@ -121,19 +125,19 @@ impl error::Error for Errors {
 
 /// A Nintendo Network account server error
 #[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-pub struct Error {
+pub struct Error<'a> {
     /// The cause of the error
-    pub cause: Option<String>,
+    pub cause: Option<Cow<'a, str>>,
 
     /// The error code. Appears to always be represented as four digits right-aligned
     pub code: ErrorCode,
 
     /// The error message
-    pub message: String,
+    pub message: Option<Cow<'a, str>>,
 }
 
 #[async_trait]
-impl ToXml for Error {
+impl<'a> ToXml for Error<'a> {
     async fn to_xml<W>(&self, writer: &mut Writer<W>) -> Result<()>
     where
         W: Write + Send + Sync,
@@ -149,11 +153,13 @@ impl ToXml for Error {
         generate_xml_field_write_by_propagation!(b"code", writer, self.code);
 
         // the message
-        generate_xml_field_write!(
-            b"message",
-            writer,
-            BytesText::from_plain(self.message.as_bytes())
-        );
+        if let Some(ref message) = &self.message {
+            generate_xml_field_write!(
+                b"message",
+                writer,
+                BytesText::from_plain(message.as_bytes())
+            );
+        }
 
         writer.write_event(Event::End(BytesEnd::borrowed(b"error")))?;
 
@@ -162,7 +168,7 @@ impl ToXml for Error {
 }
 
 #[async_trait]
-impl FromXml for Error {
+impl<'a> FromXml for Error<'a> {
     async fn from_xml<R>(&mut self, reader: &mut Reader<R>, buffer_pool: BufferPool) -> Result<()>
     where
         R: Read + BufRead + Send + Sync,
@@ -173,7 +179,7 @@ impl FromXml for Error {
             c,
             b"cause" => {
                 self.cause =
-                    Some(reader.read_text(c.name(), &mut *buffer_pool.get().await?)?)
+                    Some(Cow::Owned(reader.read_text(c.name(), &mut *buffer_pool.get().await?)?))
             },
             b"code" => {
                 generate_xml_field_read_by_propagation!(
@@ -185,25 +191,27 @@ impl FromXml for Error {
             },
             b"message" => {
                 self.message =
-                    reader.read_text(c.name(), &mut *buffer_pool.get().await?)?
+                    Some(Cow::Owned(reader.read_text(c.name(), &mut *buffer_pool.get().await?)?))
             }
         )
     }
 }
 
-impl fmt::Display for Error {
+impl<'a> fmt::Display for Error<'a> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             formatter,
             "Error code `{:0>4}` arised with message `{}` and cause `{}`",
             self.code.to_u16().unwrap_or(0),
-            self.message,
-            self.cause.as_ref().unwrap_or(&"no cause".to_string())
+            self.message
+                .as_ref()
+                .unwrap_or(&Cow::Borrowed("no message")),
+            self.cause.as_ref().unwrap_or(&Cow::Borrowed("no cause"))
         )
     }
 }
 
-impl error::Error for Error {
+impl<'a> error::Error for Error<'a> {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         Some(&self.code)
     }
@@ -375,7 +383,7 @@ pub enum ErrorCodeValue {
     RequestNotFound = 8,
 
     #[error("This request uses the wrong HTTP method")]
-    WrongHTTPMethod = 9,
+    WrongHttpMethod = 9,
 
     #[error("The platform id provided in the request is invalid")]
     InvalidPlatformId = 10,

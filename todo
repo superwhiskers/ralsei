@@ -1,0 +1,8 @@
+TODO:
+
+- rework ralsei-keypairs to have a consistent manifest
+- fragment the server module, currently in ralsei-model
+- update import paths to work with new locations
+- document ralsei-util entirely
+- ensure everything builds
+- update ci workflow

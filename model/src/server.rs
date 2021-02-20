@@ -9,6 +9,12 @@
 
 //! This module provides
 
+//TODO(superwhiskers): fragment this crate into multiple pieces
+//
+// - default service urls go into their respective crates
+// - api endpoint module generation macro into `ralsei-util`
+// - service kind enumeration stays in `ralsei-model`
+
 use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
 
 /// The default (official Nintendo) host for the account server

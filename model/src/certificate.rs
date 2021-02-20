@@ -23,7 +23,7 @@ use std::{
 use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
 use thiserror::Error;
 
-use crate::model::console::common::Kind as ConsoleKind;
+use crate::console::common::Kind as ConsoleKind;
 
 /// A Nintendo certificate container
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]

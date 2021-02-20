@@ -1,0 +1,18 @@
+[package]
+name = "ralsei-keypairs"
+description = "a crate containing the keypairs necessary to authenticate with nintendo servers"
+version = "0.0.0"
+authors = ["superwhiskers <whiskerdev@protonmail.com>"]
+repository = "https://github.com/superwhiskers/ralsei"
+readme = "https://github.com/superwhiskers/ralsei/blob/master/keypairs/readme.md"
+keywords = ["nintendo-network", "web", "nintendo", "http", "api", "async", "parser", "protocol", "xml", "network", "client", "server", "networking"]
+categories = ["API bindings", "Encoding", "Network programming", "Parser implementations"]
+edition = "2018"
+license = "MPL-2.0"
+
+[lib]
+name = "ralsei_keypairs"
+test = true
+
+[dependencies]
+

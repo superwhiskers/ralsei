@@ -42,12 +42,5 @@
 #![feature(once_cell)]
 #![feature(never_type)]
 
-//pub mod server;
-
-#[cfg(feature = "client")]
-pub mod client;
-
-pub mod keypairs;
-pub mod model;
-
-mod internal;
+pub mod builder;
+pub mod xml;
