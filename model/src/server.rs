@@ -7,41 +7,14 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
+//TODO(superwhiskers): finish documentation
 //! This module provides
-
-//TODO(superwhiskers): fragment this crate into multiple pieces
-//
-// - default service urls go into their respective crates
-// - api endpoint module generation macro into `ralsei-util`
-// - service kind enumeration stays in `ralsei-model`
 
 use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
 
-/// The default (official Nintendo) host for the account server
-pub const DEFAULT_ACCOUNT_SERVER_HOST: &str = "account.nintendo.net";
-
+//TODO(superwhiskers): create ralsei-service-mii or something and shove this there
 /// The default (official Nintendo) host for the Mii CDN
-pub const DEFAULT_MII_CDN_HOST: &str = "mii-secure.account.nintendo.net";
-
-/// A macro designed to simplify creation of constants of paths for various api endpoints
-macro generate_api_endpoints($doc:literal, $module_identifier:ident as $base_endpoint:literal => [$($name:ident = $path:literal),+]) {
-    #[doc = $doc]
-    pub mod $module_identifier {
-        $(
-            #[doc = "A constant containing the absolute path for the `"]
-            #[doc = $path]
-            #[doc = "` api endpoint relative to the base endpoint `"]
-            #[doc = $base_endpoint]
-            #[doc = "`"]
-            pub const $name: &str = concat!($base_endpoint, $path, "/");
-        ),+
-    }
-}
-
-generate_api_endpoints!(
-    "A module containing paths to various endpoints of the Nintendo Network account server",
-    account_api_endpoints as "/v1/api" => [PEOPLE = "/people"]
-);
+const DEFAULT_MII_CDN_HOST: &str = "mii-secure.account.nintendo.net";
 
 /// An enumeration over the nintendo network server kinds, each containing a URL that points to the
 /// host

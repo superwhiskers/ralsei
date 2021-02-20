@@ -27,20 +27,18 @@ use std::borrow::Cow;
 use thiserror::Error;
 
 use crate::{
-    internal::builder_set,
-    model::{
-        certificate::Certificate,
-        console::common::{
-            Console, ConsoleSerial, Environment, HeaderConstructionError, InvalidSerialError,
-            Kind as ConsoleKind, Region as ConsoleRegion, Type as ConsoleType,
-        },
-        server::Kind as ServerKind,
-        title::{
-            id::{TitleId, UniqueId},
-            version::TitleVersion,
-        },
+    certificate::Certificate,
+    console::common::{
+        Console, ConsoleSerial, Environment, HeaderConstructionError, InvalidSerialError,
+        Kind as ConsoleKind, Region as ConsoleRegion, Type as ConsoleType,
+    },
+    server::Kind as ServerKind,
+    title::{
+        id::{TitleId, UniqueId},
+        version::TitleVersion,
     },
 };
+use ralsei_util::builder::builder_set;
 
 /// A builder-like type, used to ease in the creation of [`ConsoleWiiU`] types
 ///
@@ -64,7 +62,9 @@ impl<'a> ConsoleWiiUBuilder<'a> {
     /// [`UniqueId`]: ../../title/id/struct.UniqueId.html
     /// [`TitleId`]: ../../title/id/struct.TitleId.html
     /// [`unique_id`]: ./struct.ConsoleWiiU.html#structfield.unique_id
-    pub fn derive_unique_id_from_title_id(&mut self) -> Result<&mut Self, ConsoleWiiUBuilderError> {
+    pub fn derive_unique_id_from_title_id(
+        &mut self,
+    ) -> Result<&mut Self, ConsoleWiiUBuilderError> {
         self.console.unique_id = Some(
             self.console
                 .title_id
@@ -114,7 +114,9 @@ impl<'a> ConsoleWiiUBuilder<'a> {
     /// [`Type`]: ../common/enum.Type.html
     /// [`ConsoleSerial`]: ../common/struct.ConsoleSerial.html
     /// [`device_type`]: ./struct.ConsoleWiiU.html#structfield.device_type
-    pub fn derive_device_type_from_serial(&mut self) -> Result<&mut Self, ConsoleWiiUBuilderError> {
+    pub fn derive_device_type_from_serial(
+        &mut self,
+    ) -> Result<&mut Self, ConsoleWiiUBuilderError> {
         self.console.device_type = Some(
             self.console
                 .serial

@@ -25,7 +25,7 @@ use std::{borrow::Cow, fmt, num::ParseIntError};
 use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
 use thiserror::Error;
 
-use crate::model::{
+use crate::{
     certificate::CertificateError, console::n3ds::Model as N3dsModel, server::Kind as ServerKind,
 };
 

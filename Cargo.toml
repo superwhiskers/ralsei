@@ -4,7 +4,7 @@ members = [
   "keypairs",
   "model",
 
-  # "service/account",
+  "service/account",
 
   # "protocol/rmc",
   # "protocol/prudp-v0",

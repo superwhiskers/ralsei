@@ -36,7 +36,7 @@ pub enum Error {
     /// [`String`]: https://doc.rust-lang.org/nightly/std/string/struct.String.html
     /// [`Vec`]: https://doc.rust-lang.org/nightly/std/vec/struct.Vec.html
     #[error("An error was encountered while creating a String from a Vec")]
-    FromUTF8Error(#[from] FromUtf8Error),
+    FromUtf8Error(#[from] FromUtf8Error),
 
     /// The XML is improperly formatted
     #[error("The XML document is improperly formatted")]

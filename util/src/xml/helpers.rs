@@ -10,7 +10,7 @@
 //! something
 
 /// A helper macro used to make writing simple field writes easier
-pub macro generate_xml_field_write($name:expr, $writer:ident, $bytes_text:expr) {
+pub macro generate_xml_field_write($name:expr, $writer:ident, $bytes_text:expr) {{
     use quick_xml::events::{BytesEnd, BytesStart, Event};
 
     use $crate::xml::errors::{Error, FormattingError};
@@ -18,13 +18,13 @@ pub macro generate_xml_field_write($name:expr, $writer:ident, $bytes_text:expr) 
     $writer.write_event(Event::Start(BytesStart::borrowed_name($name)))?;
     $writer.write_event(Event::Text($bytes_text))?;
     $writer.write_event(Event::End(BytesEnd::borrowed($name)))?;
-}
+}}
 
 /// A helper macro to aid in calling a contained item's [`ToXml`] implementation, reducing
 /// boilerplate
 ///
 /// [`ToXml`]: ./trait.ToXml.html
-pub macro generate_xml_field_write_by_propagation($name:expr, $writer:ident, $contained:expr) {
+pub macro generate_xml_field_write_by_propagation($name:expr, $writer:ident, $contained:expr) {{
     use quick_xml::events::{BytesEnd, BytesStart, Event};
 
     use $crate::xml::errors::{Error, FormattingError};
@@ -32,13 +32,13 @@ pub macro generate_xml_field_write_by_propagation($name:expr, $writer:ident, $co
     $writer.write_event(Event::Start(BytesStart::borrowed_name($name)))?;
     $contained.to_xml($writer).await?;
     $writer.write_event(Event::End(BytesEnd::borrowed($name)))?;
-}
+}}
 
 /// A helper macro to aid in calling a contained item's [`FromXml`] implementation, reducing
 /// boilerplate
 ///
 /// [`FromXml`]: ./trait.FromXml.html
-pub macro generate_xml_field_read_by_propagation($container:expr, $reader:ident, $buffer_pool:expr, $name:expr) {
+pub macro generate_xml_field_read_by_propagation($container:expr, $reader:ident, $buffer_pool:expr, $name:expr) {{
     use quick_xml::events::Event;
     use std::str;
 
@@ -59,10 +59,10 @@ pub macro generate_xml_field_read_by_propagation($container:expr, $reader:ident,
             format!("{:?}", event),
         )));
     }
-}
+}}
 
 /// A helper macro to aid in checking that the first XML element is correct for a structure
-pub macro generate_xml_struct_read_check($name:expr, $reader:ident, $buffer_pool:expr) {
+pub macro generate_xml_struct_read_check($name:expr, $reader:ident, $buffer_pool:expr) {{
     use quick_xml::events::Event;
     use std::str;
 
@@ -84,12 +84,12 @@ pub macro generate_xml_struct_read_check($name:expr, $reader:ident, $buffer_pool
             )));
         }
     }
-}
+}}
 
 /// A helper macro that simplifies writing [`FromXml`] implementations
 ///
 /// [`FromXml`]: ./trait.FromXml.html
-pub macro generate_xml_struct_read($name:expr, $reader:ident, $buffer_pool:expr, $content:ident, $($item:expr => $result:block),*) {
+pub macro generate_xml_struct_read($name:expr, $reader:ident, $buffer_pool:expr, $content:ident, $($item:expr => $result:block),*) {{
     use quick_xml::events::Event;
     use std::str;
 
@@ -126,4 +126,4 @@ pub macro generate_xml_struct_read($name:expr, $reader:ident, $buffer_pool:expr,
 
         Ok(())
     }
-}
+}}

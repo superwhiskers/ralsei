@@ -21,7 +21,7 @@
 //! # Basic usage
 //!
 //! ```rust
-//! # use ralsei::model::title::id::{TitleId, Platform, Variation};
+//! # use ralsei_model::title::id::{TitleId, Platform, Variation};
 //! // the title id of the 3ds' system settings application
 //! let mset_title_id = TitleId(0x0004001000021000);
 //!

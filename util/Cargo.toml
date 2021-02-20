@@ -18,6 +18,6 @@ test = true
 deadpool = "^0.7"
 async-trait = "^0.1"
 quick-xml = "^0.20"
-thiserror = "^1.0"
+thiserror = "^1"
 strum = "^0.20"
 strum_macros = "^0.20"

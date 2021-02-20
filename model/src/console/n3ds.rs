@@ -32,21 +32,18 @@ use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
 use thiserror::Error;
 
 use crate::{
-    internal::builder_set,
-    model::{
-        certificate::Certificate,
-        console::common::{
-            Console, ConsoleSerial, Environment, HeaderConstructionError, InvalidSerialError,
-            Kind as ConsoleKind, Model as ConsoleModel, Region as ConsoleRegion,
-            Type as ConsoleType,
-        },
-        server::Kind as ServerKind,
-        title::{
-            id::{TitleId, UniqueId},
-            version::TitleVersion,
-        },
+    certificate::Certificate,
+    console::common::{
+        Console, ConsoleSerial, Environment, HeaderConstructionError, InvalidSerialError,
+        Kind as ConsoleKind, Model as ConsoleModel, Region as ConsoleRegion, Type as ConsoleType,
+    },
+    server::Kind as ServerKind,
+    title::{
+        id::{TitleId, UniqueId},
+        version::TitleVersion,
     },
 };
+use ralsei_util::builder::builder_set;
 
 /// The 3ds console's model. For more information, see [3dbrew]
 ///
@@ -191,7 +188,9 @@ impl<'a> Console3dsBuilder<'a> {
     /// [`Model`]: ./enum.Model.html
     /// [`ConsoleSerial`]: ../common/struct.ConsoleSerial.html
     /// [`device_model`]: ./struct.Console3ds.html#structfield.device_model
-    pub fn derive_device_model_from_serial(&mut self) -> Result<&mut Self, Console3dsBuilderError> {
+    pub fn derive_device_model_from_serial(
+        &mut self,
+    ) -> Result<&mut Self, Console3dsBuilderError> {
         self.console.device_model = Some(
             self.console
                 .serial
@@ -341,7 +340,8 @@ impl<'a> Console3ds<'a> {
     where
         F: for<'b> FnOnce(
             &'b mut Console3dsBuilder<'a>,
-        ) -> Result<&'b mut Console3dsBuilder<'a>, Console3dsBuilderError>,
+        )
+            -> Result<&'b mut Console3dsBuilder<'a>, Console3dsBuilderError>,
     {
         let mut builder = Console3dsBuilder::default();
         f(&mut builder)?;

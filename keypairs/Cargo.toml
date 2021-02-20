@@ -13,6 +13,3 @@ license = "MPL-2.0"
 [lib]
 name = "ralsei_keypairs"
 test = true
-
-[dependencies]
-
