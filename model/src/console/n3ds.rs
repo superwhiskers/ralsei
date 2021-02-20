@@ -188,9 +188,7 @@ impl<'a> Console3dsBuilder<'a> {
     /// [`Model`]: ./enum.Model.html
     /// [`ConsoleSerial`]: ../common/struct.ConsoleSerial.html
     /// [`device_model`]: ./struct.Console3ds.html#structfield.device_model
-    pub fn derive_device_model_from_serial(
-        &mut self,
-    ) -> Result<&mut Self, Console3dsBuilderError> {
+    pub fn derive_device_model_from_serial(&mut self) -> Result<&mut Self, Console3dsBuilderError> {
         self.console.device_model = Some(
             self.console
                 .serial
@@ -340,8 +338,7 @@ impl<'a> Console3ds<'a> {
     where
         F: for<'b> FnOnce(
             &'b mut Console3dsBuilder<'a>,
-        )
-            -> Result<&'b mut Console3dsBuilder<'a>, Console3dsBuilderError>,
+        ) -> Result<&'b mut Console3dsBuilder<'a>, Console3dsBuilderError>,
     {
         let mut builder = Console3dsBuilder::default();
         f(&mut builder)?;

@@ -43,5 +43,5 @@
 #![feature(never_type)]
 
 pub mod builder;
-pub mod xml;
 pub mod misc;
+pub mod xml;
