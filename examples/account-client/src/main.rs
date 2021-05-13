@@ -134,11 +134,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         ("eula", Some(arguments)) => println!(
             "agreement: {:?}",
-            client.agreement_xml(CountryCode::for_alpha2_caseless(
-                arguments
-                    .value_of("COUNTRY")
-                    .expect("no country code was provided (this should never happen"),
-            )?, AgreementVersionParameter::Latest).await?
+            client
+                .agreement_xml(
+                    CountryCode::for_alpha2_caseless(
+                        arguments
+                            .value_of("COUNTRY")
+                            .expect("no country code was provided (this should never happen"),
+                    )?,
+                    AgreementVersionParameter::Latest
+                )
+                .await?
         ),
         _ => println!("you shouldn't have done that"),
     }

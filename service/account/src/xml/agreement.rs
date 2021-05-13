@@ -31,10 +31,10 @@ use ralsei_util::xml::{
     errors::{Error as XmlError, FormattingError},
     framework::{BufferPool, FromXml, ToXml},
     helpers::{
-        generate_xml_field_write, generate_xml_field_write_by_propagation,
-        generate_xml_field_read_by_propagation,
-        generate_xml_cdata_write, generate_xml_cdata_field_read,
-        generate_xml_struct_read, generate_xml_struct_read_check,
+        generate_xml_cdata_field_read, generate_xml_cdata_write,
+        generate_xml_field_read_by_propagation, generate_xml_field_write,
+        generate_xml_field_write_by_propagation, generate_xml_struct_read,
+        generate_xml_struct_read_check,
     },
 };
 

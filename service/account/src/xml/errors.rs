@@ -8,8 +8,8 @@
 //
 
 use chrono::format::ParseError as DateTimeParseError;
-use isocountry::CountryCodeParseErr as CountryCodeParseError;
 use iso::language::Error as LanguageCodeParseError;
+use isocountry::CountryCodeParseErr as CountryCodeParseError;
 use std::num::ParseIntError;
 
 use ralsei_util::xml::errors::ResultWithError;

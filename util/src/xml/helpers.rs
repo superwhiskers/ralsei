@@ -81,7 +81,7 @@ pub macro generate_xml_cdata_field_read($reader:ident, $content:ident, $buffer_p
                 let unescaped = &c.unescaped()?;
                 let $content = $reader.decode(unescaped)?;
                 $result
-            },
+            }
             Event::End(c) => match c.name() {
                 $name => break,
                 n => {
