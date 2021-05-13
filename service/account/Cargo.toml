@@ -4,7 +4,7 @@ description = "an implementation of datatypes and a client that both pertain to 
 version = "0.0.0"
 authors = ["superwhiskers <whiskerdev@protonmail.com>"]
 repository = "https://github.com/superwhiskers/ralsei"
-readme = "https://github.com/superwhiskers/ralsei/blob/master/service/account/readme.md"
+readme = "readme.md"
 keywords = ["nintendo-network", "web", "nintendo", "http", "api", "async", "parser", "protocol", "xml", "network", "client", "server", "networking"]
 categories = ["API bindings", "Encoding", "Network programming", "Parser implementations"]
 edition = "2018"
@@ -15,46 +15,44 @@ name = "ralsei_service_account"
 test = true
 
 [dependencies]
-futures = "^0.3"
-http = "^0.2"
-hyper-tls = "^0.5"
-native-tls = "^0.2"
-quick-xml = "^0.20"
-thiserror = "^1"
-tokio-native-tls = "^0.3"
-isolanguage-1 = "^0.2"
-isocountry = "^0.3"
-chrono = "^0.4"
-strum = "^0.20"
-strum_macros = "^0.20"
-async-trait = "^0.1"
-num-derive = "^0.3"
-num-traits = "^0.2"
+futures = "0.3"
+http = "0.2"
+hyper-tls = "0.5"
+native-tls = "0.2"
+quick-xml = "0.20"
+thiserror = "1"
+tokio-native-tls = "0.3"
+iso = "0"
+isocountry = "0.3"
+chrono = "0.4"
+strum = "0.20"
+strum_macros = "0.20"
+async-trait = "0.1"
+num-derive = "0.3"
+num-traits = "0.2"
 
-#
-# consider removing unnecessary features
-#
+#TODO(superwhiskers): consider removing unnecessary features
 
 [dependencies.tokio]
-version = "^1"
+version = "1"
 features = ["full"]
 
 [dependencies.hyper]
-version = "^0.14"
+version = "0.14"
 features = ["http1", "stream", "runtime", "client"]
 
 [dependencies.parking_lot]
-version = "^0.11"
+version = "0.11"
 features = ["nightly"]
 
 [dependencies.ralsei-model]
 path = "../../model"
-version = "^0"
+version = "0"
 
 [dependencies.ralsei-util]
 path = "../../util"
-version = "^0"
+version = "0"
 
 [dependencies.ralsei-keypairs]
 path = "../../keypairs"
-version = "^0"
+version = "0"

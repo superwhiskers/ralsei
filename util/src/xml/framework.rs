@@ -12,11 +12,13 @@ use deadpool::managed::{Manager, Pool, RecycleResult};
 use quick_xml::{Reader, Writer};
 use std::{
     borrow::Cow,
+    error::Error as StdError,
+    fmt::Debug,
     io::{BufRead, Read, Write},
     result::Result as StdResult,
 };
 
-use super::errors::Result;
+use crate::xml::errors::ResultWithError;
 
 /// A type alias for a [`Pool`] of [`Vec<u8>`]s
 ///
@@ -45,18 +47,28 @@ impl Manager<Vec<u8>, !> for BufferPoolManager {
 
 /// A convenience trait for indicating that a given thing can be serialized to XML
 #[async_trait]
-pub trait ToXml {
+pub trait ToXml<E>
+where
+    E: StdError + Debug,
+{
     /// Serializes the data structure into XML
-    async fn to_xml<W>(&self, writer: &mut Writer<W>) -> Result<()>
+    async fn to_xml<W>(&self, writer: &mut Writer<W>) -> ResultWithError<(), E>
     where
         W: Write + Send + Sync;
 }
 
 /// A convenience trait indicating that a given thing can be deserialized from XML
 #[async_trait]
-pub trait FromXml: Sized {
+pub trait FromXml<E>: Sized
+where
+    E: StdError + Debug,
+{
     /// Deserializes the data structure from XML
-    async fn from_xml<R>(&mut self, reader: &mut Reader<R>, buffer_pool: BufferPool) -> Result<()>
+    async fn from_xml<R>(
+        &mut self,
+        reader: &mut Reader<R>,
+        buffer_pool: BufferPool,
+    ) -> ResultWithError<(), E>
     where
         R: Read + BufRead + Send + Sync;
 }
@@ -65,9 +77,10 @@ pub trait FromXml: Sized {
 /// implementation
 ///
 /// [`ToXml`]: ./trait.ToXml.html
-pub async fn to_string<T>(value: &T) -> Result<String>
+pub async fn to_string<T, E>(value: &T) -> ResultWithError<String, E>
 where
-    T: ToXml,
+    T: ToXml<E>,
+    E: StdError + Debug,
 {
     let mut writer = Writer::new(Vec::new());
     value.to_xml(&mut writer).await?;
@@ -78,9 +91,13 @@ where
 /// implementation
 ///
 /// [`FromXml`]: ./trait.FromXml.html
-pub async fn from_string<T>(value: Cow<'_, str>, buffer_pool: &mut BufferPool) -> Result<T>
+pub async fn from_string<T, E>(
+    value: Cow<'_, str>,
+    buffer_pool: &mut BufferPool,
+) -> ResultWithError<T, E>
 where
-    T: FromXml + Default,
+    T: FromXml<E> + Default,
+    E: StdError + Debug,
 {
     let mut reader = Reader::from_str(&value);
     let mut result = T::default();

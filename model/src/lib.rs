@@ -1,7 +1,6 @@
 //
 // ralsei - fast nintendo library in rust
 //
-
 // copyright (c) 2020-2021 superwhiskers <whiskerdev@protonmail.com>
 // this source code form is subject to the terms of the mozilla public
 // license, v. 2.0. if a copy of the mpl was not distributed with this
@@ -36,10 +35,8 @@
 #![deny(clippy::option_option)]
 #![deny(clippy::mut_mut)]
 #![feature(bool_to_option)]
-#![feature(const_fn)]
 #![feature(decl_macro)]
 #![feature(concat_idents)]
-#![feature(or_patterns)]
 #![feature(once_cell)]
 #![feature(never_type)]
 

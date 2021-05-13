@@ -29,7 +29,7 @@
 // overcomplication of how to handle this
 
 /// A macro designed to simplify creation of constants of paths for various api endpoints
-pub macro generate_api_endpoints($doc:literal, $module_identifier:ident as $base_endpoint:literal => [$($name:ident = $path:literal),+]) {
+pub macro generate_api_endpoints($doc:literal, $module_identifier:ident as $base_endpoint:literal => [ $($name:ident = $path:literal),+ ]) {
     #[doc = $doc]
     pub mod $module_identifier {
         $(

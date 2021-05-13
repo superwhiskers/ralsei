@@ -1,4 +1,5 @@
 debug/
 target/
 **/*.rs.bk
-.direnv
+.direnv/
+.idea/

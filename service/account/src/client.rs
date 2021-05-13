@@ -17,18 +17,18 @@ use hyper::{
     Body, Error as HyperError,
 };
 use hyper_tls::HttpsConnector;
+use isocountry::CountryCode;
 use native_tls::{
     Certificate, Error as NativeTlsError, Identity, TlsConnector as NativeTlsConnector,
 };
 use parking_lot::RwLock;
 use quick_xml::Reader as XmlReader;
 use std::{borrow::Cow, convert::TryFrom, sync::Arc};
-use thiserror::Error;
 use tokio_native_tls::TlsConnector;
 
 use crate::{
     common::{account_api_endpoints, DEFAULT_ACCOUNT_SERVER_HOST},
-    xml::error as error_xml,
+    xml::{agreement::Agreements, error as error_xml, errors::Error as XmlErrorExtension},
 };
 use ralsei_keypairs::{CTR_COMMON_1, NINTENDO_CACERTS, WUP_ACCOUNT_1};
 use ralsei_model::{
@@ -223,13 +223,103 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
             status => Err(ClientError::UnknownStatusCode(status)),
         }
     }
+
+    /// Retrieve [`Agreements`] from the provided account server based on their intended country and
+    /// version
+    ///
+    /// [`Agreements`]: ./xml/agreement/struct.Agreements.html
+    pub async fn agreement_xml(
+        &self,
+        country: CountryCode,
+        version: AgreementVersionParameter,
+    ) -> Result<Agreements<'_>, ClientError> {
+        //TODO(superwhiskers): find a more efficient way to do this, as this is likely not as
+        //                     efficient as it could be
+        let mut path = version.to_string();
+        path.insert(0, '/');
+        path.insert_str(0, country.alpha2());
+        path.insert_str(0, account_api_endpoints::EULAS);
+        let response = self
+            .request(
+                Request::builder()
+                    .method("GET")
+                    .uri(
+                        Uri::builder()
+                            .scheme("https")
+                            .authority(Authority::try_from(self.host.read().as_ref())?)
+                            .path_and_query(PathAndQuery::try_from(path.as_str())?)
+                            .build()?,
+                    )
+                    .version(HttpVersion::HTTP_11)
+                    .body(Body::empty())?,
+            )
+            .await?;
+        match response.status().as_u16() {
+            200 => {
+                let mut agreements = Agreements::default();
+                agreements
+                    .from_xml(
+                        &mut XmlReader::from_reader(
+                            response
+                                .into_body()
+                                .try_fold(Vec::new(), |mut accumulator, chunk| async move {
+                                    accumulator.extend_from_slice(&chunk);
+                                    Ok(accumulator)
+                                })
+                                .await?
+                                .as_slice(),
+                        ),
+                        self.pool.clone(),
+                    )
+                    .await?;
+                Ok(agreements)
+            }
+            400 | 401 => {
+                let mut error = error_xml::Errors::default();
+                error
+                    .from_xml(
+                        &mut XmlReader::from_reader(
+                            response
+                                .into_body()
+                                .try_fold(Vec::new(), |mut accumulator, chunk| async move {
+                                    accumulator.extend_from_slice(&chunk);
+                                    Ok(accumulator)
+                                })
+                                .await?
+                                .as_slice(),
+                        ),
+                        self.pool.clone(),
+                    )
+                    .await?;
+                Err(error.into())
+            }
+            status => Err(ClientError::UnknownStatusCode(status)),
+        }
+    }
+}
+
+/// An enumeration over the ways a version can be represented to the agreement xml retrieval
+/// endpoint of an account server
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
+pub enum AgreementVersionParameter {
+    Latest,
+    Version(u16),
+}
+
+impl ToString for AgreementVersionParameter {
+    fn to_string(&self) -> String {
+        match &self {
+            Self::Latest => "@latest".to_string(),
+            Self::Version(version_number) => version_number.to_string(),
+        }
+    }
 }
 
 /// A list of possible errors encountered while using the [`Client`]
 ///
 /// [`Client`]: ./struct.Client.html
 #[non_exhaustive]
-#[derive(Error, Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum ClientError {
     /// An error encountered when the provided [`Kind`] of console is not supported
     ///
@@ -249,7 +339,7 @@ pub enum ClientError {
 
     /// An error encountered if the Nintendo Network API raises an error
     #[error("An error was encountered while using the Nintendo Network account API")]
-    ErrorXml(#[from] error_xml::Errors<'static>), // TODO(superwhiskers): look into the necessity of this
+    ErrorXml(#[from] error_xml::Errors<'static>), //TODO(superwhiskers): look into the necessity of this
 
     /// An error was encountered while using hyper
     #[error("An error was encountered while using the `hyper` library")]
@@ -265,7 +355,7 @@ pub enum ClientError {
 
     /// An error was encountered while deserializing XML
     #[error("An error was encountered while deserializing XML")]
-    XmlError(#[from] XmlError),
+    XmlError(#[from] XmlError<XmlErrorExtension>),
 
     /// The Nintendo Network API returned an unknown status code
     #[error("The Nintendo Network API returned an unknown status code, `{0}`")]

@@ -131,18 +131,14 @@ pub enum Environment {
 }
 
 impl fmt::Display for Environment {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::L(n) => "L".to_string() + &n.to_string(),
-                Self::D(n) => "D".to_string() + &n.to_string(),
-                Self::S(n) => "S".to_string() + &n.to_string(),
-                Self::T(n) => "T".to_string() + &n.to_string(),
-                Self::J(n) => "J".to_string() + &n.to_string(),
-            }
-        )
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::L(n) => write!(formatter, "L{}", n),
+            Self::D(n) => write!(formatter, "D{}", n),
+            Self::S(n) => write!(formatter, "S{}", n),
+            Self::T(n) => write!(formatter, "T{}", n),
+            Self::J(n) => write!(formatter, "J{}", n),
+        }
     }
 }
 

@@ -21,8 +21,9 @@ use std::{
     str::FromStr,
 };
 
+use crate::xml::errors::{Error as XmlErrorExtension, Result};
 use ralsei_util::xml::{
-    errors::{Error as XmlError, FormattingError, Result},
+    errors::{Error as XmlError, FormattingError},
     framework::{BufferPool, FromXml, ToXml},
     helpers::{
         generate_xml_field_read_by_propagation, generate_xml_field_write,
@@ -58,7 +59,7 @@ impl<'a> Errors<'a> {
 }
 
 #[async_trait]
-impl<'a> ToXml for Errors<'a> {
+impl<'a> ToXml<XmlErrorExtension> for Errors<'a> {
     async fn to_xml<W>(&self, writer: &mut Writer<W>) -> Result<()>
     where
         W: Write + Send + Sync,
@@ -77,7 +78,7 @@ impl<'a> ToXml for Errors<'a> {
 }
 
 #[async_trait]
-impl<'a> FromXml for Errors<'a> {
+impl<'a> FromXml<XmlErrorExtension> for Errors<'a> {
     async fn from_xml<R>(&mut self, reader: &mut Reader<R>, buffer_pool: BufferPool) -> Result<()>
     where
         R: Read + BufRead + Send + Sync,
@@ -106,10 +107,7 @@ impl<'a> fmt::Display for Errors<'a> {
         if let Some(error) = self.errors.get(0) {
             error.fmt(formatter)
         } else {
-            write!(
-                formatter,
-                "An error xml was parsed but no errors were in the body"
-            )
+            formatter.write_str("An error xml was parsed but no errors were in the body")
         }
     }
 }
@@ -137,7 +135,7 @@ pub struct Error<'a> {
 }
 
 #[async_trait]
-impl<'a> ToXml for Error<'a> {
+impl<'a> ToXml<XmlErrorExtension> for Error<'a> {
     async fn to_xml<W>(&self, writer: &mut Writer<W>) -> Result<()>
     where
         W: Write + Send + Sync,
@@ -146,7 +144,7 @@ impl<'a> ToXml for Error<'a> {
 
         // the error cause
         if let Some(ref cause) = &self.cause {
-            generate_xml_field_write!(b"cause", writer, BytesText::from_plain(cause.as_bytes()));
+            generate_xml_field_write!(b"cause", writer, BytesText::from_plain_str(cause));
         }
 
         // the error code
@@ -154,11 +152,7 @@ impl<'a> ToXml for Error<'a> {
 
         // the message
         if let Some(ref message) = &self.message {
-            generate_xml_field_write!(
-                b"message",
-                writer,
-                BytesText::from_plain(message.as_bytes())
-            );
+            generate_xml_field_write!(b"message", writer, BytesText::from_plain_str(message));
         }
 
         writer.write_event(Event::End(BytesEnd::borrowed(b"error")))?;
@@ -168,7 +162,7 @@ impl<'a> ToXml for Error<'a> {
 }
 
 #[async_trait]
-impl<'a> FromXml for Error<'a> {
+impl<'a> FromXml<XmlErrorExtension> for Error<'a> {
     async fn from_xml<R>(&mut self, reader: &mut Reader<R>, buffer_pool: BufferPool) -> Result<()>
     where
         R: Read + BufRead + Send + Sync,
@@ -249,7 +243,7 @@ impl ErrorCode {
 }
 
 #[async_trait]
-impl ToXml for ErrorCode {
+impl ToXml<XmlErrorExtension> for ErrorCode {
     async fn to_xml<W>(&self, writer: &mut Writer<W>) -> Result<()>
     where
         W: Write + Send + Sync,
@@ -263,7 +257,7 @@ impl ToXml for ErrorCode {
 }
 
 #[async_trait]
-impl FromXml for ErrorCode {
+impl FromXml<XmlErrorExtension> for ErrorCode {
     async fn from_xml<R>(&mut self, reader: &mut Reader<R>, buffer_pool: BufferPool) -> Result<()>
     where
         R: Read + BufRead + Send + Sync,

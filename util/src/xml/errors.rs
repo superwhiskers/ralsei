@@ -9,16 +9,27 @@
 
 use deadpool::managed::PoolError;
 use quick_xml::Error as QuickXmlError;
-use std::{error::Error as StdError, str::Utf8Error, string::FromUtf8Error};
+use std::{error::Error as StdError, fmt::Debug, str::Utf8Error, string::FromUtf8Error};
 
-/// A convenience alias for Result types within this module
-pub type Result<T> = std::result::Result<T, Error>;
+/// A convenience alias for [`Result`] types within this module
+///
+/// [`Result`]: https://doc.rust-lang.org/nightly/std/result/enum.Result.html
+pub type Result<T> = ResultWithError<T, !>;
+
+/// Another convenience alias for the Result type, but with the extension error type defined by the
+/// returning function
+///
+/// [`Result`]: https://doc.rust-lang.org/nightly/std/result/enum.Result.html
+pub type ResultWithError<T, E> = std::result::Result<T, Error<E>>;
 
 /// An enumeration over errors that can arise while working with the datatypes provided within this
 /// module
 #[non_exhaustive]
 #[derive(thiserror::Error, Debug)]
-pub enum Error {
+pub enum Error<E>
+where
+    E: StdError + Debug,
+{
     /// An error that may arise while working with quick-xml
     #[error("An error was encountered while using the `quick-xml` library")]
     QuickXmlError(#[from] QuickXmlError),
@@ -38,6 +49,10 @@ pub enum Error {
     #[error("An error was encountered while creating a String from a Vec")]
     FromUtf8Error(#[from] FromUtf8Error),
 
+    /// An error defined by the function returning the error
+    #[error("An error was encountered")]
+    CustomError(E), //TODO(superwhiskers): once type constraints support negative equality, add the
+    //                     `#[from]` attribute to the wrapped value
     /// The XML is improperly formatted
     #[error("The XML document is improperly formatted")]
     Formatting(#[from] FormattingError),

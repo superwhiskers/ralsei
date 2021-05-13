@@ -238,6 +238,17 @@ impl<'a> ConsoleWiiU<'a> {
         f(&mut builder)?;
         Ok(builder.build())
     }
+
+    /// Creates a new [`ConsoleWiiU`] from the provided [`ConsoleWiiUBuilder`]
+    ///
+    /// While there aren't many cases in which this would be used, it is left here for when
+    /// avoiding closures is preferred
+    ///
+    /// [`ConsoleWiiU`]: ./struct.ConsoleWiiU.html
+    /// [`ConsoleWiiUBuilder`]: ./struct.ConsoleWiiUBuilder.html
+    pub fn from_builder(builder: ConsoleWiiUBuilder<'a>) -> Self {
+        builder.build()
+    }
 }
 
 impl<'a> Console<'a> for ConsoleWiiU<'_> {

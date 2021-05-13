@@ -7,7 +7,6 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
-use base64;
 use clap::clap_app;
 use isocountry::CountryCode;
 use isolanguage_1::LanguageCode;
@@ -23,7 +22,7 @@ use ralsei_model::{
     network::Nnid,
     title::{id::TitleId, version::TitleVersion},
 };
-use ralsei_service_account::client::Client;
+use ralsei_service_account::client::{AgreementVersionParameter, Client};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -48,6 +47,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             (about: "parse a title id and display as much information about it as possible")
             (@arg TITLE_ID: +required "the title id to parse, in hexadecimal format (without the `0x` prefix)")
         )
+        (@subcommand eula =>
+            (about: "get the latest nintendo network eula for the given country")
+            (@arg COUNTRY: +required "the country to get the eula for")
+        )
     ).get_matches();
 
     let console = Arc::new(RwLock::new(Console3ds::new(|b| {
@@ -56,7 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .derive_region_from_serial()?
             .derive_device_model_from_serial()?
             .derive_device_type_from_serial()?
-            .system_version(TitleVersion(0x02D0))
+            .system_version(TitleVersion(0x02E0))
             .country(CountryCode::USA)
             .client_id(Cow::Borrowed("ea25c66c26b403376b4c5ed94ab9cdea"))
             .client_secret(Cow::Borrowed("d137be62cb6a2b831cad8c013b92fb55"))
@@ -64,7 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .environment(DeviceEnvironment::L(1))
             .title_id(TitleId(0x000400100002C000))
             .derive_unique_id_from_title_id()?
-            .title_version(TitleVersion(0003))
+            .title_version(TitleVersion(3))
             .language(LanguageCode::En))
     })?));
 
@@ -129,6 +132,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("new3ds only: {}", unique_id.is_new3ds_only());
             println!("unique id group: {:?}", unique_id.group());
         }
+        ("eula", Some(arguments)) => println!(
+            "agreement: {:?}",
+            client.agreement_xml(CountryCode::for_alpha2_caseless(
+                arguments
+                    .value_of("COUNTRY")
+                    .expect("no country code was provided (this should never happen"),
+            )?, AgreementVersionParameter::Latest).await?
+        ),
         _ => println!("you shouldn't have done that"),
     }
     Ok(())

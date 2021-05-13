@@ -35,10 +35,8 @@
 #![deny(clippy::option_option)]
 #![deny(clippy::mut_mut)]
 #![feature(bool_to_option)]
-#![feature(const_fn)]
 #![feature(decl_macro)]
 #![feature(concat_idents)]
-#![feature(or_patterns)]
 #![feature(once_cell)]
 #![feature(never_type)]
 

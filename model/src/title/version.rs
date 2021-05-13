@@ -34,7 +34,7 @@
 //! [`minor`]: ./struct.TitleVersion.html#method.minor
 //! [`micro`]: ./struct.TitleVersion.html#method.micro
 
-use num_x::{u4, u6};
+use unin::{u4, u6};
 
 /// A bitmask representing the major version portion of a [`TitleVersion`]
 ///

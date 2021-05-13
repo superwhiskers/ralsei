@@ -7,13 +7,13 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
-use ralsei_util::misc::generate_api_endpoints;
-
 /// The default (official Nintendo) host for the account server
 pub const DEFAULT_ACCOUNT_SERVER_HOST: &str = "account.nintendo.net";
 
-generate_api_endpoints!(
-    "A module containing paths to various endpoints of the Nintendo Network account server",
-    account_api_endpoints as "/v1/api" =>
-        [PEOPLE = "/people"]
-);
+//TODO(superwhiskers): make a proper macro for this as the existing one doesn't work at all with
+//                     multiple endpoints
+/// A module containing paths to various endpoints of the Nintendo Network account server
+pub mod account_api_endpoints {
+    pub const PEOPLE: &str = "/v1/api/people/";
+    pub const EULAS: &str = "/v1/api/content/agreements/Nintendo-Network-EULA/";
+}

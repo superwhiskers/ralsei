@@ -36,7 +36,7 @@
 use bitflags::bitflags;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::cast::FromPrimitive;
-use num_x::u24;
+use unin::u24;
 
 /// A bitmask representing the [`Platform`] portion of a [`TitleId`]
 ///

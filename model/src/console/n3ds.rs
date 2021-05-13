@@ -106,11 +106,8 @@ impl TryFrom<ConsoleModel> for Model {
 pub struct ConsoleModelTo3dsModelConversionError(pub ConsoleModel);
 
 impl fmt::Display for ConsoleModelTo3dsModelConversionError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "The provided ConsoleModel has no corresponding 3ds Model"
-        )
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("The provided ConsoleModel has no corresponding 3ds Model")
     }
 }
 
@@ -343,6 +340,17 @@ impl<'a> Console3ds<'a> {
         let mut builder = Console3dsBuilder::default();
         f(&mut builder)?;
         Ok(builder.build())
+    }
+
+    /// Creates a new [`Console3ds`] from the provided [`Console3dsBuilder`]
+    ///
+    /// While there aren't many cases in which this would be used, it is left here for when
+    /// avoiding closures is preferred
+    ///
+    /// [`Console3ds`]: ./struct.Console3ds.html
+    /// [`Console3dsBuilder`]: ./struct.Console3dsBuilder.html
+    pub fn from_builder(builder: Console3dsBuilder<'a>) -> Self {
+        builder.build()
     }
 }
 
