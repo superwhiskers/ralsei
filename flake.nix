@@ -11,7 +11,7 @@
       let pkgs = nixpkgs.legacyPackages."${system}";
       in {
         devShell = pkgs.mkShell {
-          nativeBuildInputs = with pkgs; [ openssl pkg-config rustup ];
+          nativeBuildInputs = with pkgs; [ openssl pkg-config rustup libxml2 ];
         };
       });
 }
