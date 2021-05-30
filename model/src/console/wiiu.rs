@@ -22,7 +22,7 @@
 
 use hyper::header::{self, HeaderMap, HeaderValue};
 use isocountry::CountryCode;
-use isolanguage_1::LanguageCode;
+use iso::language::{Language, Iso639_1};
 use std::borrow::Cow;
 use thiserror::Error;
 
@@ -142,7 +142,7 @@ impl<'a> ConsoleWiiUBuilder<'a> {
         device_certificate,
         Certificate<'a>
     );
-    builder_set!("language", console, language, LanguageCode);
+    builder_set!("language", console, language, Iso639_1);
 }
 
 /// An enumeration over all possible errors that can occur when using a [`ConsoleWiiUBuilder`]
@@ -170,7 +170,7 @@ pub enum ConsoleWiiUBuilderError {
 /// Usage of this structure implies that the mocked device's platform id (a value used in the
 /// headers of requests to the account server and possible others) is `1`
 #[non_exhaustive]
-#[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Default, Debug, Eq, Hash, PartialEq)]
 pub struct ConsoleWiiU<'a> {
     /// inherent: `X-Nintendo-Platform-ID` = 1
 
@@ -218,7 +218,7 @@ pub struct ConsoleWiiU<'a> {
     pub device_certificate: Option<Certificate<'a>>,
 
     /// provides `Accept-Language`
-    pub language: Option<LanguageCode>,
+    pub language: Option<Iso639_1>,
 }
 
 impl<'a> ConsoleWiiU<'a> {

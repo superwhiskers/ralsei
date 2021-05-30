@@ -39,6 +39,9 @@
 #![feature(concat_idents)]
 #![feature(once_cell)]
 #![feature(never_type)]
+#![feature(maybe_uninit_slice)]
+#![feature(maybe_uninit_write_slice)]
+#![feature(maybe_uninit_uninit_array)]
 
 pub mod client;
 pub mod common;

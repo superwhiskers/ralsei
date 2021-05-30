@@ -17,13 +17,14 @@ use hyper::{
     Body, Error as HyperError,
 };
 use hyper_tls::HttpsConnector;
+use iso::language::{Iso639_1, Language};
 use isocountry::CountryCode;
 use native_tls::{
     Certificate, Error as NativeTlsError, Identity, TlsConnector as NativeTlsConnector,
 };
 use parking_lot::RwLock;
 use quick_xml::Reader as XmlReader;
-use std::{borrow::Cow, convert::TryFrom, sync::Arc};
+use std::{borrow::Cow, convert::TryFrom, mem::MaybeUninit, str, sync::Arc};
 use tokio_native_tls::TlsConnector;
 
 use crate::{
@@ -32,6 +33,7 @@ use crate::{
         agreement::{AgreementKindValue, Agreements},
         error as error_xml,
         errors::Error as XmlErrorExtension,
+        timezone::Timezones,
     },
 };
 use ralsei_keypairs::{CTR_COMMON_1, NINTENDO_CACERTS, WUP_ACCOUNT_1};
@@ -53,8 +55,6 @@ pub struct Client<'a, C: Console<'a> + Send + Clone> {
     /// The host of the account server (not the api endpoint)
     ///
     /// If no value is provided, it is initialized with [`DEFAULT_ACCOUNT_SERVER_HOST`].
-    ///
-    /// [`DEFAULT_ACCOUNT_SERVER_HOST`]: ../../model/server/constant.DEFAULT_ACCOUNT_SERVER_HOST.html
     pub host: RwLock<Cow<'a, str>>,
 
     /// The console data we are connecting to the account server with
@@ -67,8 +67,6 @@ pub struct Client<'a, C: Console<'a> + Send + Clone> {
     ///
     /// This is used to speed up XML deserialization by reusing memory as much as possible,
     /// removing the overhead of memory allocation
-    ///
-    /// [`Vec<u8>`]: https://doc.rust-lang.org/nightly/std/vec/struct.Vec.html
     pub pool: BufferPool,
 
     /// A cache of the headers to avoid recalling [`Console.http_headers()`]
@@ -96,10 +94,7 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
     /// If no value for the `pool` parameter is provided, it is initialized to a global pool of
     /// vectors with a fixed capacity of 100
     ///
-    /// [`Console`]: ../../model/console/common/trait.Console.html
     /// [`host`]: #structfield.host
-    /// [`DEFAULT_ACCOUNT_SERVER_HOST`]: ../../model/server/constant.DEFAULT_ACCOUNT_SERVER_HOST.html
-    /// [`NINTENDO_CACERTS`]: ../../keypairs/constant.NINTENDO_CACERTS.html
     pub fn new<'b>(
         host: Option<Cow<'a, str>>,
         console: Arc<RwLock<C>>,
@@ -168,8 +163,6 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
     }
 
     /// Execute a request using the provided [`Request`]
-    ///
-    /// [`Request`]: https://docs.rs/http/0.2.1/http/request/struct.Request.html
     #[inline]
     pub fn request(&self, mut request: Request<Body>) -> ResponseFuture {
         request
@@ -179,8 +172,6 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
     }
 
     /// Check if a user with the given [`Nnid`] exists on the provided account server
-    ///
-    /// [`Nnid`]: ../../model/network/struct.Nnid.html
     pub async fn does_user_exist(&self, nnid: Nnid<'_>) -> Result<bool, ClientError> {
         let mut path = nnid.0.into_owned();
         path.insert_str(0, account_api_endpoints::PEOPLE);
@@ -225,16 +216,13 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
                     _ => Err(error.into()),
                 }
             }
-            status => Err(ClientError::UnknownStatusCode(status)),
+            status => Err(ClientError::UnexpectedStatusCode(status)),
         }
     }
 
-    //TODO(superwhiskers): add timezones method
-
-    /// Retrieve [`Agreements`] from the provided account server based on their kind, intended
-    /// country, and version
-    ///
-    /// [`Agreements`]: ./xml/agreement/struct.Agreements.html
+    /// Retrieve [`Agreements`] from the provided account server based on their
+    /// [kind](AgreementKindValue), their associated [`CountryCode`], and
+    /// [version](AgreementVersionParameter)
     pub async fn agreements(
         &self,
         kind: AgreementKindValue,
@@ -259,6 +247,7 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
         path.push_str(country.alpha2());
         path.push('/');
         path.push_str(&version);
+
         let response = self
             .request(
                 Request::builder()
@@ -313,7 +302,88 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
                     .await?;
                 Err(error.into())
             }
-            status => Err(ClientError::UnknownStatusCode(status)),
+            status => Err(ClientError::UnexpectedStatusCode(status)),
+        }
+    }
+
+    /// Retrieve [`Timezones`] from the provided account server based on their associated
+    /// [`CountryCode`] and [language](Iso639_1)
+    pub async fn timezones(
+        &self,
+        country: CountryCode,
+        language: Iso639_1,
+    ) -> Result<Timezones<'_>, ClientError> {
+        // the length is determined by the length of
+        // - the timezones path string - 27
+        // - the country - 2
+        // - the slash - 1
+        // - the language - 2
+        let mut path: [MaybeUninit<u8>; 32] = MaybeUninit::uninit_array();
+
+        MaybeUninit::write_slice(&mut path[..27], account_api_endpoints::TIMEZONES.as_bytes());
+        MaybeUninit::write_slice(&mut path[27..29], country.alpha2().as_bytes());
+        path[29] = MaybeUninit::new(b'/');
+        MaybeUninit::write_slice(&mut path[30..], language.code().as_bytes());
+
+        let response = self
+            .request(
+                Request::builder()
+                    .method("GET")
+                    .uri(
+                        Uri::builder()
+                            .scheme("https")
+                            .authority(Authority::try_from(self.host.read().as_ref())?)
+                            .path_and_query(PathAndQuery::try_from(unsafe {
+                                // SAFETY: `path` has been initialized
+                                // SAFETY: all bytes are written from valid utf8
+                                str::from_utf8_unchecked(MaybeUninit::slice_assume_init_ref(&path))
+                            })?)
+                            .build()?,
+                    )
+                    .version(HttpVersion::HTTP_11)
+                    .body(Body::empty())?,
+            )
+            .await?;
+        match response.status().as_u16() {
+            200 => {
+                let mut timezones = Timezones::default();
+                timezones
+                    .from_xml(
+                        &mut XmlReader::from_reader(
+                            response
+                                .into_body()
+                                .try_fold(Vec::new(), |mut accumulator, chunk| async move {
+                                    accumulator.extend_from_slice(&chunk);
+                                    Ok(accumulator)
+                                })
+                                .await?
+                                .as_slice(),
+                        ),
+                        self.pool.clone(),
+                    )
+                    .await?;
+                Ok(timezones)
+            }
+            400 | 401 => {
+                let mut error = error_xml::Errors::default();
+                error
+                    .from_xml(
+                        &mut XmlReader::from_reader(
+                            response
+                                .into_body()
+                                .try_fold(Vec::new(), |mut accumulator, chunk| async move {
+                                    accumulator.extend_from_slice(&chunk);
+                                    Ok(accumulator)
+                                })
+                                .await?
+                                .as_slice(),
+                        ),
+                        self.pool.clone(),
+                    )
+                    .await?;
+                Err(error.into())
+            }
+            status => Err(ClientError::UnexpectedStatusCode(status)),
         }
     }
 }
@@ -336,20 +406,14 @@ impl ToString for AgreementVersionParameter {
 }
 
 /// A list of possible errors encountered while using the [`Client`]
-///
-/// [`Client`]: ./struct.Client.html
 #[non_exhaustive]
 #[derive(thiserror::Error, Debug)]
 pub enum ClientError {
-    /// An error encountered when the provided [`Kind`] of console is not supported
-    ///
-    /// [`Kind`]:  ../../model/console/common/enum.Kind.html
+    /// An error encountered when the provided [`Kind`](ConsoleKind) of console is not supported
     #[error("`{0}` is an unsupported console Kind")]
     UnsupportedConsoleKind(ConsoleKind),
 
     /// An error encountered when the header values provided by the [`Console`] are invalid
-    ///
-    /// [`Console`]: ../../model/console/common/trait.Console.html
     #[error("An error was encountered while constructing headers")]
     HeaderConstructionError(#[from] HeaderConstructionError),
 
@@ -359,7 +423,7 @@ pub enum ClientError {
 
     /// An error encountered if the Nintendo Network API raises an error
     #[error("An error was encountered while using the Nintendo Network account API")]
-    ErrorXml(#[from] error_xml::Errors<'static>), //TODO(superwhiskers): look into the necessity of this
+    ErrorXml(#[from] error_xml::Errors<'static>), //TODO(superwhiskers): look into the necessity of this being 'static
 
     /// An error was encountered while using hyper
     #[error("An error was encountered while using the `hyper` library")]
@@ -377,7 +441,7 @@ pub enum ClientError {
     #[error("An error was encountered while deserializing XML")]
     XmlError(#[from] XmlError<XmlErrorExtension>),
 
-    /// The Nintendo Network API returned an unknown status code
-    #[error("The Nintendo Network API returned an unknown status code, `{0}`")]
-    UnknownStatusCode(u16),
+    /// The Nintendo Network API returned an unexpected status code
+    #[error("The Nintendo Network API returned an unexpected status code, `{0}`")]
+    UnexpectedStatusCode(u16),
 }

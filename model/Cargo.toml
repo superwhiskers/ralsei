@@ -23,7 +23,7 @@ strum_macros = "0.20"
 bitflags = "1"
 http = "0.2"
 base64 = "0.13"
-isolanguage-1 = "0.2"
+iso = "0"
 isocountry = "0.3"
 unin = "0"
 

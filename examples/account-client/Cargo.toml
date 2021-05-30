@@ -12,7 +12,7 @@ license = "MPL-2.0"
 
 [dependencies]
 base64 = "0.13"
-isolanguage-1 = "0.2"
+iso = "0"
 isocountry = "0.3"
 
 #TODO(superwhiskers): consider removing unnecessary features

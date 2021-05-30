@@ -21,7 +21,7 @@
 
 use http::header::{self, HeaderMap, HeaderValue};
 use isocountry::CountryCode;
-use isolanguage_1::LanguageCode;
+use iso::language::{Language, Iso639_1};
 use std::{
     borrow::Cow,
     convert::{TryFrom, TryInto},
@@ -59,8 +59,6 @@ use ralsei_util::builder::builder_set;
     Eq,
     Hash,
     PartialEq,
-    PartialOrd,
-    Ord,
 )]
 pub enum Model {
     #[strum(to_string = "CTR")]
@@ -233,7 +231,7 @@ impl<'a> Console3dsBuilder<'a> {
         device_certificate,
         Certificate<'a>
     );
-    builder_set!("language", console, language, LanguageCode);
+    builder_set!("language", console, language, Iso639_1);
     builder_set!("device_model", console, device_model, Model);
 }
 
@@ -269,7 +267,7 @@ pub enum Console3dsBuilderError {
 /// Usage of this structure implies that the mocked device's platform id (a value used in the
 /// headers of requests to the account server and possibly others) is `0`
 #[non_exhaustive]
-#[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Default, Debug, Eq, Hash, PartialEq)]
 pub struct Console3ds<'a> {
     /// inherent: `X-Nintendo-Platform-ID` = 0
 
@@ -317,7 +315,7 @@ pub struct Console3ds<'a> {
     pub device_certificate: Option<Certificate<'a>>,
 
     /// provides `Accept-Language`
-    pub language: Option<LanguageCode>,
+    pub language: Option<Iso639_1>,
 
     /** 3ds-specific */
 

@@ -8,10 +8,10 @@
 //
 
 use clap::clap_app;
+use iso::language::Iso639_1;
 use isocountry::CountryCode;
-use isolanguage_1::LanguageCode;
 use parking_lot::RwLock;
-use std::{borrow::Cow, convert::TryFrom, sync::Arc};
+use std::{borrow::Cow, convert::TryFrom, str::FromStr, sync::Arc};
 
 use ralsei_model::{
     certificate::Certificate,
@@ -50,9 +50,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             (about: "parse a title id and display as much information about it as possible")
             (@arg TITLE_ID: +required "the title id to parse, in hexadecimal format (without the `0x` prefix)")
         )
-        (@subcommand eula =>
-            (about: "get the latest nintendo network eula for the given country")
+        (@subcommand eulas =>
+            (about: "get the latest nintendo network eulas for the given country")
             (@arg COUNTRY: +required "the country to get the eula for")
+        )
+        (@subcommand timezones =>
+            (about: "get the timezones from a specified country with names in the specified language")
+            (@arg COUNTRY: +required "the country to get timezones from")
+            (@arg LANGUAGE: +required "the language to have the names in")
         )
     ).get_matches();
 
@@ -71,7 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .title_id(TitleId(0x000400100002C000))
             .derive_unique_id_from_title_id()?
             .title_version(TitleVersion(3))
-            .language(LanguageCode::En))
+            .language(Iso639_1::En))
     })?));
 
     let client = Client::new(None, console.clone(), None, None, None)?;
@@ -135,8 +140,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("new3ds only: {}", unique_id.is_new3ds_only());
             println!("unique id group: {:?}", unique_id.group());
         }
-        ("eula", Some(arguments)) => println!(
-            "agreement: {:?}",
+        ("eulas", Some(arguments)) => println!(
+            "eulas: {:?}",
             client
                 .agreements(
                     AgreementKindValue::Eula,
@@ -146,6 +151,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             .expect("no country code was provided (this should never happen"),
                     )?,
                     AgreementVersionParameter::Latest
+                )
+                .await?
+        ),
+        ("timezones", Some(arguments)) => println!(
+            "timezones: {:?}",
+            client
+                .timezones(
+                    CountryCode::for_alpha2_caseless(
+                        arguments
+                            .value_of("COUNTRY")
+                            .expect("no country code was provided (this should never happen"),
+                    )?,
+                    Iso639_1::from_str(
+                        arguments
+                            .value_of("LANGUAGE")
+                            .expect("no language code was provided (this should never happen"),
+                    )?,
                 )
                 .await?
         ),
