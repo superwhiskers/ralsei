@@ -10,22 +10,15 @@
 //TODO(superwhiskers): finish documentation
 //! This module provides
 
+use std::borrow::Cow;
 use strum_macros::{AsRefStr, Display, EnumString, IntoStaticStr};
 
-//TODO(superwhiskers): create ralsei-service-mii or something and shove this there
-/// The default (official Nintendo) host for the Mii CDN
-const DEFAULT_MII_CDN_HOST: &str = "mii-secure.account.nintendo.net";
-
-/// An enumeration over the nintendo network server kinds, each containing a URL that points to the
-/// host
-///
-/// The address provided should be the *host* of the server;
-/// it should not be a url to the api endpoint
+/// An enumeration over the different kinds of Nintendo Network servers, each of which contain the
+/// host address of the server
 #[non_exhaustive]
 #[derive(
     IntoStaticStr, AsRefStr, EnumString, Display, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord,
 )]
 pub enum Kind<'a> {
-    Account(&'a str),
-    Mii(&'a str),
+    Account(Cow<'a, str>),
 }

@@ -14,14 +14,10 @@
 //! through the API of the [`Console`] trait
 //!
 //! Aside from that, there is also an enumeration over the 3ds models at [`Model`]
-//!
-//! [`Console3ds`]: ./struct.Console3ds.html
-//! [`Console`]: ../common/trait.Console.html
-//! [`Model`]: ./enum.Model.html
 
 use http::header::{self, HeaderMap, HeaderValue};
+use iso::language::{Iso639_1, Language};
 use isocountry::CountryCode;
-use iso::language::{Language, Iso639_1};
 use std::{
     borrow::Cow,
     convert::{TryFrom, TryInto},
@@ -48,18 +44,7 @@ use ralsei_util::builder::builder_set;
 /// The 3ds console's model. For more information, see [3dbrew]
 ///
 /// [3dbrew]: https://www.3dbrew.org/wiki/Cfg:GetSystemModel#System_Model_Values
-#[derive(
-    IntoStaticStr,
-    AsRefStr,
-    EnumString,
-    Display,
-    Copy,
-    Clone,
-    Debug,
-    Eq,
-    Hash,
-    PartialEq,
-)]
+#[derive(IntoStaticStr, AsRefStr, EnumString, Display, Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Model {
     #[strum(to_string = "CTR")]
     Nintendo3ds,
@@ -80,9 +65,6 @@ impl TryFrom<ConsoleModel> for Model {
 
     /// Attempt to create a [`Model`] from a [`ConsoleModel`]. If an error has occurred, then the
     /// [`ConsoleModel`] is not a 3ds model
-    ///
-    /// [`Model`]: ./enum.Model.html
-    /// [`ConsoleModel`]: ../common/enum.Model.html
     fn try_from(model: ConsoleModel) -> Result<Self, Self::Error> {
         Ok(match model {
             ConsoleModel::Nintendo3ds => Model::Nintendo3ds,
@@ -97,9 +79,6 @@ impl TryFrom<ConsoleModel> for Model {
 }
 
 /// An error that may occur when converting a [`ConsoleModel`] into a [`Model`]
-///
-/// [`ConsoleModel`]: ../common/enum.Model.html
-/// [`Model`]: ./enum.Model.html
 #[derive(Debug)]
 pub struct ConsoleModelTo3dsModelConversionError(pub ConsoleModel);
 
@@ -112,8 +91,6 @@ impl fmt::Display for ConsoleModelTo3dsModelConversionError {
 impl Error for ConsoleModelTo3dsModelConversionError {}
 
 /// A builder-like type, used to ease in the creation of [`Console3ds`] types
-///
-/// [`Console3ds`]: ./struct.Console3ds.html
 #[derive(Debug, Default)]
 pub struct Console3dsBuilder<'a> {
     pub(crate) console: Console3ds<'a>,
@@ -121,8 +98,6 @@ pub struct Console3dsBuilder<'a> {
 
 impl<'a> Console3dsBuilder<'a> {
     /// "Builds" the builder type, returning the internal [`Console3ds`]
-    ///
-    /// [`Console3ds`]: ./struct.Console3ds.html
     fn build(self) -> Console3ds<'a> {
         self.console
     }
@@ -130,8 +105,6 @@ impl<'a> Console3dsBuilder<'a> {
     /// Derives the [`UniqueId`] from the console's current [`TitleId`], producing the
     /// [`unique_id`] field
     ///
-    /// [`UniqueId`]: ../../title/id/struct.UniqueId.html
-    /// [`TitleId`]: ../../title/id/struct.TitleId.html
     /// [`unique_id`]: ./struct.Console3ds.html#structfield.unique_id
     pub fn derive_unique_id_from_title_id(&mut self) -> Result<&mut Self, Console3dsBuilderError> {
         self.console.unique_id = Some(
@@ -146,7 +119,6 @@ impl<'a> Console3dsBuilder<'a> {
 
     /// Derives the device id from the console's [`Certificate`], producing the [`device_id`] field
     ///
-    /// [`Certificate`]: ../../certificate/struct.Certificate.html
     /// [`device_id`]: ./struct.Console3ds.html#structfield.device_id
     pub fn derive_device_id_from_device_certificate(
         &mut self,
@@ -163,8 +135,6 @@ impl<'a> Console3dsBuilder<'a> {
 
     /// Derives the [`Region`] from the console's [`ConsoleSerial`], producing the [`region`] field
     ///
-    /// [`Region`]: ../common/enum.Region.html
-    /// [`ConsoleSerial`]: ../common/struct.ConsoleSerial.html
     /// [`region`]: ./struct.Console3ds.html#structfield.region
     pub fn derive_region_from_serial(&mut self) -> Result<&mut Self, Console3dsBuilderError> {
         self.console.region = Some(
@@ -180,8 +150,6 @@ impl<'a> Console3dsBuilder<'a> {
     /// Derives the [`Model`] from the console's [`ConsoleSerial`], producing the [`device_model`]
     /// field
     ///
-    /// [`Model`]: ./enum.Model.html
-    /// [`ConsoleSerial`]: ../common/struct.ConsoleSerial.html
     /// [`device_model`]: ./struct.Console3ds.html#structfield.device_model
     pub fn derive_device_model_from_serial(&mut self) -> Result<&mut Self, Console3dsBuilderError> {
         self.console.device_model = Some(
@@ -195,11 +163,9 @@ impl<'a> Console3dsBuilder<'a> {
         Ok(self)
     }
 
-    /// Derives the [`Type`] from the console's [`ConsoleSerial`], producing the [`device_type`]
-    /// field
+    /// Derives the [`Type`](ConsoleType) from the console's [`ConsoleSerial`], producing the
+    /// [`device_type`] field
     ///
-    /// [`Type`]: ../common/enum.Type.html
-    /// [`ConsoleSerial`]: ../common/struct.ConsoleSerial.html
     /// [`device_type`]: ./struct.Console3ds.html#structfield.device_type
     pub fn derive_device_type_from_serial(&mut self) -> Result<&mut Self, Console3dsBuilderError> {
         self.console.device_type = Some(
@@ -236,21 +202,15 @@ impl<'a> Console3dsBuilder<'a> {
 }
 
 /// An enumeration over all possible errors that can occur when using a [`Console3dsBuilder`]
-///
-/// [`Console3dsBuilder`]: ./struct.Console3dsBuilder.html
 #[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum Console3dsBuilderError {
-    /// An error encountered when using a [`Serial`]
-    ///
-    /// [`Serial`]: ../common/struct.Serial.html
-    #[error("An error was encountered while using a Serial")]
+    /// An error encountered when using a [`ConsoleSerial`]
+    #[error("An error was encountered while using a ConsoleSerial")]
     InvalidSerialError(#[from] InvalidSerialError),
 
-    /// An error encountered when the provided [`Serial`] has a console model that has no
+    /// An error encountered when the provided [`ConsoleSerial`] has a console model that has no
     /// corresponding model for a 3ds
-    ///
-    /// [`Serial`]: ../common/struct.Serial.html
     #[error("The provided Serial has a console model has no corresponding 3ds model")]
     UnimplementedConsoleModel(#[from] ConsoleModelTo3dsModelConversionError),
 
@@ -326,9 +286,6 @@ pub struct Console3ds<'a> {
 impl<'a> Console3ds<'a> {
     /// Creates a new [`Console3ds`] using the provided closure, which is passed a
     /// [`Console3dsBuilder`] to operate upon
-    ///
-    /// [`Console3ds`]: ./struct.Console3ds.html
-    /// [`Console3dsBuilder`]: ./struct.Console3dsBuilder.html
     pub fn new<F>(f: F) -> Result<Self, Console3dsBuilderError>
     where
         F: for<'b> FnOnce(
@@ -344,9 +301,6 @@ impl<'a> Console3ds<'a> {
     ///
     /// While there aren't many cases in which this would be used, it is left here for when
     /// avoiding closures is preferred
-    ///
-    /// [`Console3ds`]: ./struct.Console3ds.html
-    /// [`Console3dsBuilder`]: ./struct.Console3dsBuilder.html
     pub fn from_builder(builder: Console3dsBuilder<'a>) -> Self {
         builder.build()
     }

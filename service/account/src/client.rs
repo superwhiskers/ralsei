@@ -69,9 +69,7 @@ pub struct Client<'a, C: Console<'a> + Send + Clone> {
     /// removing the overhead of memory allocation
     pub pool: BufferPool,
 
-    /// A cache of the headers to avoid recalling [`Console.http_headers()`]
-    ///
-    /// [`Console.http_headers()`]: ../../model/console/common/trait.Console.html#tymethod.http_headers
+    /// A cache of the headers to avoid recalling [`Console::http_headers`]
     pub(crate) cached_headers: RwLock<HeaderMap<HeaderValue>>,
 
     /// The HTTP client used to make requests to the account server
@@ -111,7 +109,7 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
             } else {
                 GLOBAL_BUFFER_POOL.clone()
             },
-            cached_headers: RwLock::new(console.read().http_headers(ServerKind::Account(&host))?),
+            cached_headers: RwLock::new(console.read().http_headers(ServerKind::Account(Cow::Borrowed(&host)))?),
             http: HttpClient::builder().build(HttpsConnector::from((
                 {
                     let mut http = HttpConnector::new();
@@ -158,7 +156,7 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
         *self.cached_headers.write() = self
             .console
             .read()
-            .http_headers(ServerKind::Account(&self.host.read()))?;
+            .http_headers(ServerKind::Account(Cow::Borrowed(&self.host.read())))?;
         Ok(())
     }
 

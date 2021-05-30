@@ -21,16 +21,9 @@ use std::{
 use crate::xml::errors::ResultWithError;
 
 /// A type alias for a [`Pool`] of [`Vec<u8>`]s
-///
-/// [`Pool`]: https://docs.rs/deadpool/0.6.0/deadpool/managed/struct.Pool.html
-/// [`Vec<u8>`]: https://doc.rust-lang.org/nightly/std/vec/struct.Vec.html
 pub type BufferPool = Pool<Vec<u8>, !>;
 
 /// The [`Manager`] implementation used by [`Pool`]s that are passed to implementors of [`FromXml`]
-///
-/// [`Manager`]: https://docs.rs/deadpool/0.6.0/deadpool/managed/trait.Manager.html
-/// [`Pool`]: https://docs.rs/deadpool/0.6.0/deadpool/managed/struct.Pool.html
-/// [`FromXml`]: ./trait.FromXml.html
 pub struct BufferPoolManager;
 
 #[async_trait]
@@ -75,8 +68,6 @@ where
 
 /// A function that serializes the given data structure into a string using its [`ToXml`]
 /// implementation
-///
-/// [`ToXml`]: ./trait.ToXml.html
 pub async fn to_string<T, E>(value: &T) -> ResultWithError<String, E>
 where
     T: ToXml<E>,
@@ -89,8 +80,6 @@ where
 
 /// A function that deserializes the string into the given data structure using its [`FromXml`]
 /// implementation
-///
-/// [`FromXml`]: ./trait.FromXml.html
 pub async fn from_string<T, E>(
     value: Cow<'_, str>,
     buffer_pool: &mut BufferPool,

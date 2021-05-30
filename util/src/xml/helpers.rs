@@ -7,6 +7,8 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
+// the only reason we have manual doc links here is to avoid unnecessary imports
+
 //! something
 
 /// A helper macro used to make writing simple field writes easier

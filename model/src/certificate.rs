@@ -46,8 +46,6 @@ impl<'a> Certificate<'a> {
         "unable to convert a slice into an array (this should be impossible)";
 
     /// Creates a new [`Certificate`] from its portions
-    ///
-    /// [`Certificate`]: ./struct.Certificate.html
     pub const fn new(
         signature: Signature<'a>,
         issuer: Issuer<'a>,
@@ -65,8 +63,6 @@ impl<'a> Certificate<'a> {
     }
 
     /// Converts a [`Certificate`] into a byte vector
-    ///
-    /// [`Certificate`]: ./struct.Certificate.html
     pub fn to_bytes(&self) -> Result<Vec<u8>, CertificateError> {
         let mut certificate = Vec::new();
 
@@ -139,8 +135,6 @@ impl TryFrom<&[u8]> for Certificate<'_> {
     type Error = CertificateError;
 
     /// Creates a new [`Certificate`] from a byte slice
-    ///
-    /// [`Certificate`]: ./struct.Certificate.html
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
         let signature_type = u32::from_be_bytes(
             value
@@ -255,8 +249,6 @@ impl TryFrom<&[u8]> for Certificate<'_> {
 }
 
 /// A list of all possible errors encountered while working with a [`Certificate`]
-///
-/// [`Certificate`]: ./struct.Certificate.html
 #[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum CertificateError {
@@ -274,8 +266,6 @@ pub enum CertificateError {
 }
 
 /// An enumeration over the possible magic numbers representing a kind of [`Signature`]
-///
-/// [`Signature`]: ./enum.Signature.html
 #[non_exhaustive]
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum SignatureMagic {
@@ -300,29 +290,25 @@ pub enum Signature<'a> {
 }
 
 impl Signature<'_> {
-    /// Converts a [`Signature`] into a [`SignatureMagic`]
-    ///
-    /// [`Signature`]: ./enum.Signature.html
-    /// [`SignatureMagic`]: ./enum.SignatureMagic.html
-    pub fn to_signature_magic(&self) -> Option<SignatureMagic> {
+    /// Returns the corresponding [`SignatureMagic`]
+    pub fn magic(&self) -> SignatureMagic {
         match &self {
-            Self::Rsa4096WithSha1(_) => Some(SignatureMagic::Rsa4096WithSha1),
-            Self::Rsa2048WithSha1(_) => Some(SignatureMagic::Rsa2048WithSha1),
-            Self::EllipticCurveWithSha1(_) => Some(SignatureMagic::EllipticCurveWithSha1),
-            Self::Rsa4096WithSha256(_) => Some(SignatureMagic::Rsa4096WithSha256),
-            Self::Rsa2048WithSha256(_) => Some(SignatureMagic::Rsa2048WithSha256),
-            Self::EcdsaWithSha256(_) => Some(SignatureMagic::EcdsaWithSha256),
+            Self::Rsa4096WithSha1(_) => SignatureMagic::Rsa4096WithSha1,
+            Self::Rsa2048WithSha1(_) => SignatureMagic::Rsa2048WithSha1,
+            Self::EllipticCurveWithSha1(_) => SignatureMagic::EllipticCurveWithSha1,
+            Self::Rsa4096WithSha256(_) => SignatureMagic::Rsa4096WithSha256,
+            Self::Rsa2048WithSha256(_) => SignatureMagic::Rsa2048WithSha256,
+            Self::EcdsaWithSha256(_) => SignatureMagic::EcdsaWithSha256,
         }
     }
 }
 
 /// A newtype that defines various operations on a [`Certificate`]'s issuer section
-///
-/// [`Certificate`]: ./struct.Certificate.html
 #[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Issuer<'a>(pub Cow<'a, str>);
 
 impl<'a> Issuer<'a> {
+    /// Attempt to get a [`KnownIssuer`] value from the [`Issuer`]
     pub fn known_issuer(&self) -> Option<KnownIssuer> {
         KnownIssuer::from_str(&self.0).ok()
     }
@@ -354,8 +340,6 @@ pub enum KnownIssuer {
 }
 
 /// An enumeration over all possible magic numbers representing a kind of [`Key`]
-///
-/// [`Key`]: ./enum.Key.html
 #[non_exhaustive]
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum KeyMagic {
@@ -374,29 +358,22 @@ pub enum Key<'a> {
 }
 
 impl Key<'_> {
-    /// Converts a [`Key`] into a [`KeyMagic`]
-    ///
-    /// [`Key`]: ./enum.Key.html
-    /// [`KeyMagic`]: ./enum.KeyMagic.html
-    pub fn to_key_magic(&self) -> Option<KeyMagic> {
+    /// Returns the corresponding [`KeyMagic`]
+    pub fn magic(&self) -> KeyMagic {
         match &self {
-            Self::Rsa4096(_) => Some(KeyMagic::Rsa4096),
-            Self::Rsa2048(_) => Some(KeyMagic::Rsa2048),
-            Self::EllipticCurve(_) => Some(KeyMagic::EllipticCurve),
+            Self::Rsa4096(_) => KeyMagic::Rsa4096,
+            Self::Rsa2048(_) => KeyMagic::Rsa2048,
+            Self::EllipticCurve(_) => KeyMagic::EllipticCurve,
         }
     }
 }
 
 /// A newtype that defines various operations on a [`Certificate`]'s name section
-///
-/// [`Certificate`]: ./struct.Certificate.html
 #[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Name<'a>(pub Cow<'a, str>);
 
 impl<'a> Name<'a> {
     /// Extract the device id from the [`Name`], if possible
-    ///
-    /// [`Name`]: ./struct.Name.html
     pub fn device_id(&self) -> Option<u32> {
         self.0
             .get(..2)
@@ -409,10 +386,7 @@ impl<'a> Name<'a> {
             .flatten()
     }
 
-    /// Attempt to get the [`console::common::Kind`] from the [`Name`], is possible
-    ///
-    /// [`console::common::Kind`]: ../console/common/enum.Kind.html
-    /// [`Name`]: ./struct.Name.html
+    /// Attempt to get the [`Kind`](ConsoleKind) from the [`Name`], is possible
     pub fn console_kind(&self) -> Option<ConsoleKind> {
         self.0
             .get(..2)
@@ -426,7 +400,5 @@ impl<'a> Name<'a> {
 }
 
 /// A newtype that defines various operations on a [`Certificate`]'s key id section
-///
-/// [`Certificate`]: ./struct.Certificate.html
 #[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct KeyId(pub u32);

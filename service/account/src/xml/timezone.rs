@@ -31,8 +31,6 @@ use ralsei_util::xml::{
 #[derive(Clone, Default, Debug, Eq, Hash, PartialEq)]
 pub struct Timezones<'a> {
     /// A vector of [`Timezone`] types
-    ///
-    /// [`Timezone`]: ./struct.Timezone.html
     pub timezones: Vec<Timezone<'a>>,
 }
 
@@ -93,7 +91,7 @@ pub struct Timezone<'a> {
     ///
     /// This is translated into the language specified by the [`language`] field
     ///
-    /// [`language`]: #field.language
+    /// [`language`]: #structfield.language
     pub name: Option<Cow<'a, str>>,
 
     /// The UTC offset of the timezone

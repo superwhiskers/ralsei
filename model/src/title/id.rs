@@ -30,8 +30,6 @@
 //! assert_eq!(mset_title_id.platform().unwrap(), Platform::Nintendo3ds);
 //! assert_eq!(mset_title_id.variation(), Variation(0x0));
 //! ```
-//!
-//! [`TitleId`]: ./struct.TitleId.html
 
 use bitflags::bitflags;
 use num_derive::{FromPrimitive, ToPrimitive};
@@ -39,44 +37,26 @@ use num_traits::cast::FromPrimitive;
 use unin::u24;
 
 /// A bitmask representing the [`Platform`] portion of a [`TitleId`]
-///
-/// [`Platform`]: ./enum.Platform.html
-/// [`TitleId`]: ./struct.TitleId.html
 pub const PLATFORM_BITMASK: u64 =
     0b1111_1111_1111_1111_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000;
 
 /// A bitmask representing the [`Category`] portion of a [`TitleId`]
-///
-/// [`Category`]: ./struct.Category.html
-/// [`TitleId`]: ./struct.TitleId.html
 pub const CATEGORY_BITMASK: u64 =
     0b0000_0000_0000_0000_1111_1111_1111_1111_0000_0000_0000_0000_0000_0000_0000_0000;
 
 /// A bitmask representing the [`UniqueId`] portion of a [`TitleId`]
-///
-/// [`UniqueId`]: ./struct.UniqueId.html
-/// [`TitleId`]: ./struct.TitleId.html
 pub const UNIQUE_ID_BITMASK: u64 =
     0b0000_0000_0000_0000_0000_0000_0000_0000_1111_1111_1111_1111_1111_1111_0000_0000;
 
 /// A bitmask representing the [`Variation`] portion of a [`TitleId`]
-///
-/// [`Variation`]: ./struct.Variation.html
-/// [`TitleId`]: ./struct.TitleId.html
 pub const VARIATION_BITMASK: u64 =
     0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_1111_1111;
 
 /// A bitmask representing the [`TitleIdHigh`] portion of a [`TitleId`]
-///
-/// [`TitleIdHigh`]: ./struct.TitleIdHigh.html
-/// [`TitleId`]: ./struct.TitleId.html
 pub const HIGH_BITMASK: u64 =
     0b1111_1111_1111_1111_1111_1111_1111_1111_0000_0000_0000_0000_0000_0000_0000_0000;
 
 /// A bitmask representing the [`TitleIdLow`] portion of a [`TitleId`]
-///
-/// [`TitleIdLow`]: ./struct.TitleIdLow.html
-/// [`TitleId`]: ./struct.TitleId.html
 pub const LOW_BITMASK: u64 =
     0b0000_0000_0000_0000_0000_0000_0000_0000_1111_1111_1111_1111_1111_1111_1111_1111;
 
@@ -89,10 +69,6 @@ pub struct TitleId(pub u64);
 
 impl TitleId {
     /// Create a [`TitleId`] from a [`TitleIdHigh`] and a [`TitleIdLow`]
-    ///
-    /// [`TitleId`]: ./struct.TitleId.html
-    /// [`TitleIdHigh`]: ./struct.TitleIdHigh.html
-    /// [`TitleIdLow`]: ./struct.TitleIdLow.html
     #[inline]
     pub const fn from_high_and_low(high: TitleIdHigh, low: TitleIdLow) -> Self {
         Self(((high.0 as u64) << 32) | low.0 as u64)
@@ -100,12 +76,6 @@ impl TitleId {
 
     /// Create a [`TitleId`] from its four components: [`Platform`], [`Category`], [`UniqueId`],
     /// and [`Variation`]
-    ///
-    /// [`TitleId`]: ./struct.TitleId.html
-    /// [`Platform`]: ./enum.Platform.html
-    /// [`Category`]: ./struct.Category.html
-    /// [`UniqueId`]: ./struct.UniqueId.html
-    /// [`Variation`]: ./stuct.Variation.html
     #[inline]
     pub fn from_segments(
         platform: Platform,
@@ -122,54 +92,36 @@ impl TitleId {
     }
 
     /// Extract the [`Platform`] segment from the [`TitleId`]
-    ///
-    /// [`Platform`]: ./enum.Platform.html
-    /// [`TitleId`]: ./struct.TitleId.html
     #[inline]
     pub fn platform(self) -> Option<Platform> {
         Platform::from_u16((self.0 >> 48) as u16)
     }
 
     /// Extract the [`Category`] segment from the [`TitleId`]
-    ///
-    /// [`Category`]: ./struct.Category.html
-    /// [`TitleId`]: ./struct.TitleId.html
     #[inline]
     pub fn category(self) -> Option<Category> {
         Category::from_bits(((self.0 & CATEGORY_BITMASK) >> 32) as u16)
     }
 
     /// Extract the [`UniqueId`] segment from the [`TitleId`]
-    ///
-    /// [`UniqueId`]: ./struct.UniqueId.html
-    /// [`TitleId`]: ./stuct.TitleId.html
     #[inline]
     pub fn unique_id(self) -> UniqueId {
         UniqueId(u24::new(((self.0 & UNIQUE_ID_BITMASK) >> 8) as u32))
     }
 
     /// Extract the [`Variation`] segment from the [`TitleId`]
-    ///
-    /// [`Variation`]: ./struct.Variation.html
-    /// [`TitleId`]: ./struct.TitleId.html
     #[inline]
     pub const fn variation(self) -> Variation {
         Variation((self.0 & VARIATION_BITMASK) as u8)
     }
 
     /// Extract the [`TitleIdHigh`] segment from the [`TitleId`]
-    ///
-    /// [`TitleIdHigh`]: ./struct.TitleIdHigh.html
-    /// [`TitleId`]: ./struct.TitleId.html
     #[inline]
     pub const fn high(self) -> TitleIdHigh {
         TitleIdHigh((self.0 >> 32) as u32)
     }
 
     /// Extract the [`TitleIdLow`] segment from the [`TitleId`]
-    ///
-    /// [`TitleIdLow`]: ./struct.TitleIdLow.html
-    /// [`TitleId`]: ./struct.TitleId.html
     #[inline]
     pub const fn low(self) -> TitleIdLow {
         TitleIdLow((self.0 & LOW_BITMASK) as u32)
@@ -177,51 +129,31 @@ impl TitleId {
 }
 
 /// A bitmask representing the [`Platform`] portion of a [`TitleIdHigh`]
-///
-/// [`Platform`]: ./enum.Platform.html
-/// [`TitleIdHigh`]: ./struct.TitleIdHigh.html
 pub const TIDHIGH_PLATFORM_BITMASK: u32 = 0b1111_1111_1111_1111_0000_0000_0000_0000;
 
 /// A bitmask representing the [`Category`] portion of a [`TitleIdHigh`]
-///
-/// [`Category`]: ./struct.Category.html
-/// [`TitleIdHigh`]: ./struct.TitleIdHigh.html
 pub const TIDHIGH_CATEGORY_BITMASK: u32 = 0b0000_0000_0000_0000_1111_1111_1111_1111;
 
 /// The higher portion of a [`TitleId`]
 ///
 /// It is composed of both a [`Platform`] and [`Category`] segment.
-///
-/// [`TitleId`]: ./struct.TitleId.html
-/// [`Platform`]: ./enum.Platform.html
-/// [`Category`]: ./struct.Category.html
 #[derive(Copy, Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct TitleIdHigh(pub u32);
 
 impl TitleIdHigh {
     /// Construct a [`TitleIdHigh`] from a [`Platform`] and a [`Category`]
-    ///
-    /// [`TitleId`]: ./struct.TitleId.html
-    /// [`Platform`]: ./enum.Platform.html
-    /// [`Category`]: ./struct.Category.html
     #[inline]
     pub const fn from_platform_and_category(platform: Platform, category: Category) -> Self {
         Self((platform as u32) << 16 | (category.bits() as u32))
     }
 
     /// Extract the [`Platform`] segment from the [`TitleIdHigh`]
-    ///
-    /// [`Platform`]: ./enum.Platform.html
-    /// [`TitleIdHigh`]: ./struct.TitleIdHigh.html
     #[inline]
     pub fn platform(self) -> Option<Platform> {
         Platform::from_u16((self.0 >> 16) as u16)
     }
 
     /// Extract the [`Category`] segment from the [`TitleIdHigh`]
-    ///
-    /// [`Category`]: ./struct.Category.html
-    /// [`TitleIdHigh`]: ./struct.TitleIdHigh.html
     #[inline]
     pub fn category(self) -> Option<Category> {
         Category::from_bits((self.0 & TIDHIGH_CATEGORY_BITMASK) as u16)
@@ -229,51 +161,31 @@ impl TitleIdHigh {
 }
 
 /// A bitmask representing the [`UniqueId`] portion of a [`TitleIdLow`]
-///
-/// [`UniqueId`]: ./struct.UniqueId.html
-/// [`TitleIdLow`]: ./struct.TitleIdLow.html
 pub const TIDLOW_UNIQUE_ID_BITMASK: u32 = 0b1111_1111_1111_1111_1111_1111_0000_0000;
 
 /// A bitmask representing the [`Variation`] portion of a [`TitleIdLow`]
-///
-/// [`Variation`]: ./struct.Variation.html
-/// [`TitleIdLow`]: ./struct.TitleIdLow.html
 pub const TIDLOW_VARIATION_BITMASK: u32 = 0b0000_0000_0000_0000_0000_0000_1111_1111;
 
 /// The lower portion of a [`TitleId`]
 ///
 /// It is composed of both a [`UniqueId`] and [`Variation`] segment.
-///
-/// [`TitleId`]: ./struct.TitleId.html
-/// [`UniqueId`]: ./struct.UniqueId.html
-/// [`Variation`]: ./struct.Variation.html
 #[derive(Copy, Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct TitleIdLow(pub u32);
 
 impl TitleIdLow {
     /// Constructs a [`TitleIdLow`] from a [`UniqueId`] and a [`Variation`]
-    ///
-    /// [`TitleIdLow`]: ./struct.TitleIdLow.html
-    /// [`UniqueId`]: ./struct.UniqueId.html
-    /// [`Variation`]: ./struct.Variation.html
     #[inline]
     pub fn from_unique_id_and_variation(unique_id: UniqueId, variation: Variation) -> Self {
         Self(u32::from(unique_id.0) << 8 | u32::from(variation.0))
     }
 
     /// Extract the [`UniqueId`] segment from the [`TitleIdLow`]
-    ///
-    /// [`UniqueId`]: ./struct.UniqueId.html
-    /// [`TitleIdLow`]: ./struct.TitleIdLow.html
     #[inline]
     pub fn unique_id(self) -> UniqueId {
         UniqueId(u24::new(self.0 >> 8))
     }
 
     /// Extract the [`Variation`] segment from the [`TitleIdLow`]
-    ///
-    /// [`Variation`]: ./struct.Variation.html
-    /// [`TitleIdLow`]: ./struct.TitleIdLow.html
     #[inline]
     pub const fn variation(self) -> Variation {
         Variation((self.0 & TIDLOW_VARIATION_BITMASK) as u8)
@@ -282,8 +194,6 @@ impl TitleIdLow {
 
 /// An enumeration over the possible platforms of a [`TitleId`]. Not all are listed as only some of
 /// the possible platforms are supported
-///
-/// [`TitleId`]: ./struct.TitleId.html
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum Platform {
     NintendoWiiU = 5,
@@ -294,10 +204,7 @@ bitflags! {
     /// A data structure representing the category section of a [`TitleId`].
     ///
     /// Instead of implementing the "normal" flag (`0x0`) as another possible bitflag, it is
-    /// implemented as the [`is_normal`] method due to it requiring extra logic
-    ///
-    /// [`TitleId`]: ./struct.TitleId.html
-    /// [`is_normal`]: #method.is_normal
+    /// implemented as the [`is_normal`](Self::is_normal) method due to it requiring extra logic
     pub struct Category: u16 {
         const DLPCHILD = 0b0000_0000_0000_0001;
         const DEMO = 0b0000_0000_0000_0010;
@@ -316,8 +223,6 @@ bitflags! {
 
 impl Category {
     /// Check if the enveloping [`TitleId`] represents a "normal" title
-    ///
-    /// [`TitleId`]: ./struct.TitleId.html
     #[inline]
     pub fn is_normal(self) -> bool {
         //TODO(superwhiskers): verify that this is how it actually works
@@ -326,25 +231,18 @@ impl Category {
 }
 
 /// A bitmask representing the hardware portion of a [`UniqueId`]
-///
-/// [`UniqueId`]: ./struct.UniqueId.html
 pub const UNIQUE_ID_HARDWARE_BITMASK: u32 = 0b1111_0000_0000_0000_0000_0000;
 
 /// A bitmask representing the identifier portion of a [`UniqueId`]
 ///
 /// This section of the [`UniqueId`] is represented in the library by the [`UniqueIdGroup`]
 /// enumeration.
-///
-/// [`UniqueId`]: ./struct.UniqueId.html
-/// [`UniqueIdGroup`]: ./enum.UniqueIdGroup.html
 pub const UNIQUE_ID_IDENTIFIER_BITMASK: u32 = 0b0000_1111_1111_1111_1111_1111;
 
 /// A data structure representing the unique id section of a [`TitleId`]
 ///
 /// Aside from merely acting as a container, it provides a few operations that can be performed on
 /// the contained unique id.
-///
-/// [`TitleId`]: ./struct.TitleId.html
 #[derive(Copy, Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct UniqueId(pub u24);
 
@@ -357,7 +255,6 @@ impl UniqueId {
     ///
     /// See [3dbrew] for more information.
     ///
-    /// [`UniqueId`]: ./struct.UniqueId.html
     /// [3dbrew]: https://www.3dbrew.org/wiki/Title
     #[inline]
     pub fn group(self) -> Option<UniqueIdGroup> {
@@ -372,8 +269,6 @@ impl UniqueId {
     }
 
     /// Determine if the [`UniqueId`] represents a title that is New3ds-only
-    ///
-    /// [`UniqueId`]: ./struct.UniqueId.html
     #[inline]
     pub fn is_new3ds_only(self) -> bool {
         (u24::new(UNIQUE_ID_HARDWARE_BITMASK) & self.0) >> 20 == u24::new(2)
@@ -388,8 +283,6 @@ impl UniqueId {
 ///
 /// See [3dbrew] for more information.
 ///
-/// [`UniqueId`]: ./struct.UniqueId.html
-/// [`UniqueId::group`]: ./struct.UniqueId.html#method.group
 /// [3dbrew]: https://www.3dbrew.org/wiki/Title
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum UniqueIdGroup {
@@ -415,10 +308,6 @@ pub enum UniqueIdGroup {
 ///
 /// See [3dbrew] for more information
 ///
-/// [`TitleId`]: ./struct.TitleId.html
-/// [`Category`]: ./struct.Category.html
-/// [`UniqueId`]: ./struct.UniqueId.html
-/// [`Category::TWL`]: ./struct.Category.html#associatedconstant.TWL
 /// [3dbrew]: https://www.3dbrew.org/wiki/Title
 #[derive(Copy, Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Variation(pub u8);

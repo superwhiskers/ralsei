@@ -44,8 +44,6 @@ use ralsei_util::xml::{
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Default)]
 pub struct Agreements<'a> {
     /// A vector of [`Agreement`] types
-    ///
-    /// [`Agreement`]: ./struct.Agreement.html
     pub agreements: Vec<Agreement<'a>>,
 }
 
@@ -316,10 +314,7 @@ pub enum AgreementKind<'a> {
 }
 
 impl<'a> AgreementKind<'a> {
-    /// Returns the [`AgreementKind`] represented by the provided [`Cow<'a, str>`]
-    ///
-    /// [`AgreementKind`]: ./enum.AgreementKind.html
-    /// [`Cow<'a, str>`]: https://doc.rust-lang.org/nightly/std/borrow/enum.Cow.html
+    /// Returns the [`AgreementKind`] represented by the provided [`Cow<'a, str>`](Cow)
     pub fn from_cow(value: Cow<'a, str>) -> Self {
         match AgreementKindValue::from_str(&value) {
             Ok(kind) => Self::Known(kind),
@@ -328,9 +323,6 @@ impl<'a> AgreementKind<'a> {
     }
 
     /// Returns the [`AgreementKind`] represented as a [`&str`]
-    ///
-    /// [`AgreementKind`]: ./enum.AgreementKind.html
-    /// [`&str`]: https://doc.rust-lang.org/nightly/std/primitive.str.html
     pub fn to_str(&self) -> &str {
         match &self {
             Self::Known(value) => value.as_ref(),
@@ -388,8 +380,6 @@ impl<'a> Default for AgreementKind<'a> {
 }
 
 /// An enumeration over possible [`Agreement`] kinds
-///
-/// [`Agreement`]: ./struct.Agreement.html
 #[non_exhaustive]
 #[derive(
     IntoStaticStr, AsRefStr, EnumString, Display, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord,

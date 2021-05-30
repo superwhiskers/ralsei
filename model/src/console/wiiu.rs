@@ -16,9 +16,6 @@
 //! Unlike the 3ds, the Wii U is not required to send the model as there is only really one "model"
 //! of Wii U, so there is no extra Wii U-specific model enumeration in this module, as there is in
 //! the 3ds' module
-//!
-//! [`Console3ds`]: ./struct.Console3ds.html
-//! [`Console`]: ../common/trait.Console.html
 
 use hyper::header::{self, HeaderMap, HeaderValue};
 use isocountry::CountryCode;
@@ -41,8 +38,6 @@ use crate::{
 use ralsei_util::builder::builder_set;
 
 /// A builder-like type, used to ease in the creation of [`ConsoleWiiU`] types
-///
-/// [`ConsoleWiiU`]: ./struct.ConsoleWiiU.html
 #[derive(Debug, Default)]
 pub struct ConsoleWiiUBuilder<'a> {
     pub(crate) console: ConsoleWiiU<'a>,
@@ -50,8 +45,6 @@ pub struct ConsoleWiiUBuilder<'a> {
 
 impl<'a> ConsoleWiiUBuilder<'a> {
     /// "Builds" the builder type, returning the internal [`ConsoleWiiU`]
-    ///
-    /// [`ConsoleWiiU`]: ./struct.ConsoleWiiU.html
     fn build(self) -> ConsoleWiiU<'a> {
         self.console
     }
@@ -59,8 +52,6 @@ impl<'a> ConsoleWiiUBuilder<'a> {
     /// Derives the [`UniqueId`] from the console's current [`TitleId`], producing the
     /// [`unique_id`] field
     ///
-    /// [`UniqueId`]: ../../title/id/struct.UniqueId.html
-    /// [`TitleId`]: ../../title/id/struct.TitleId.html
     /// [`unique_id`]: ./struct.ConsoleWiiU.html#structfield.unique_id
     pub fn derive_unique_id_from_title_id(&mut self) -> Result<&mut Self, ConsoleWiiUBuilderError> {
         self.console.unique_id = Some(
@@ -75,7 +66,6 @@ impl<'a> ConsoleWiiUBuilder<'a> {
 
     /// Derives the device id from the console's [`Certificate`], producing the [`device_id`] field
     ///
-    /// [`Certificate`]: ../../certificate/struct.Certificate.html
     /// [`device_id`]: ./struct.ConsoleWiiU.html#structfield.device_id
     pub fn derive_device_id_from_device_certificate(
         &mut self,
@@ -92,8 +82,6 @@ impl<'a> ConsoleWiiUBuilder<'a> {
 
     /// Derives the [`Region`] from the console's [`ConsoleSerial`], producing the [`region`] field
     ///
-    /// [`Region`]: ../common/enum.Region.html
-    /// [`ConsoleSerial`]: ../common/struct.ConsoleSerial.html
     /// [`region`]: ./struct.ConsoleWiiU.html#structfield.region
     pub fn derive_region_from_serial(&mut self) -> Result<&mut Self, ConsoleWiiUBuilderError> {
         self.console.region = Some(
@@ -106,11 +94,9 @@ impl<'a> ConsoleWiiUBuilder<'a> {
         Ok(self)
     }
 
-    /// Derives the [`Type`] from the console's [`ConsoleSerial`], producing the [`device_type`]
-    /// field
+    /// Derives the [`Type`](ConsoleType) from the console's [`ConsoleSerial`], producing the
+    /// [`device_type`] field
     ///
-    /// [`Type`]: ../common/enum.Type.html
-    /// [`ConsoleSerial`]: ../common/struct.ConsoleSerial.html
     /// [`device_type`]: ./struct.ConsoleWiiU.html#structfield.device_type
     pub fn derive_device_type_from_serial(&mut self) -> Result<&mut Self, ConsoleWiiUBuilderError> {
         self.console.device_type = Some(
@@ -146,15 +132,11 @@ impl<'a> ConsoleWiiUBuilder<'a> {
 }
 
 /// An enumeration over all possible errors that can occur when using a [`ConsoleWiiUBuilder`]
-///
-/// [`ConsoleWiiUBuilder`]: ./struct.ConsoleWiiUBuilder.html
 #[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum ConsoleWiiUBuilderError {
-    /// An error encountered when using a [`Serial`]
-    ///
-    /// [`Serial`]: ../common/struct.Serial.html
-    #[error("An error was encountered while using a Serial")]
+    /// An error encountered when using a [`ConsoleSerial`]
+    #[error("An error was encountered while using a ConsoleSerial")]
     InvalidSerialError(#[from] InvalidSerialError),
 
     /// An error encountered when the field to derive another from has nothing in it
@@ -224,9 +206,6 @@ pub struct ConsoleWiiU<'a> {
 impl<'a> ConsoleWiiU<'a> {
     /// Creates a new [`ConsoleWiiU`] using the provided closure, which is passed a
     /// [`ConsoleWiiUBuilder`} to operate upon
-    ///
-    /// [`ConsoleWiiU`]: ./struct.ConsoleWiiU.html
-    /// [`ConsoleWiiUBuilder`]: ./struct.ConsoleWiiUBuilder.html
     pub fn new<F>(f: F) -> Result<Self, ConsoleWiiUBuilderError>
     where
         F: for<'b> FnOnce(
@@ -243,9 +222,6 @@ impl<'a> ConsoleWiiU<'a> {
     ///
     /// While there aren't many cases in which this would be used, it is left here for when
     /// avoiding closures is preferred
-    ///
-    /// [`ConsoleWiiU`]: ./struct.ConsoleWiiU.html
-    /// [`ConsoleWiiUBuilder`]: ./struct.ConsoleWiiUBuilder.html
     pub fn from_builder(builder: ConsoleWiiUBuilder<'a>) -> Self {
         builder.build()
     }

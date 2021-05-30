@@ -11,8 +11,9 @@
 //! consoles from the DS up until the Switch (unverified)
 //!
 //! This module provides the [`TitleVersion`] tuple struct, which contains a `u16` encoded in the
-//! version format. There are three methods provided for accessing the data inside: [`major`],
-//! [`minor`], and [`micro`]--which return the major, minor, and micro versions of the title,
+//! version format. There are three methods provided for accessing the data inside:
+//! [`major`](TitleVersion::major), [`minor`](TitleVersion::minor), and
+//! [`micro`](TitleVersion::micro)--which return the major minor, and micro versions of the title,
 //! respectively.
 //!
 //! # Basic usage
@@ -28,27 +29,16 @@
 //! assert_eq!(mset_title_version.minor(), u6::new(0));
 //! assert_eq!(mset_title_version.micro(), u4::new(1));
 //! ```
-//!
-//! [`TitleVersion`]: ./struct.TitleVersion.html
-//! [`major`]: ./struct.TitleVersion.html#method.major
-//! [`minor`]: ./struct.TitleVersion.html#method.minor
-//! [`micro`]: ./struct.TitleVersion.html#method.micro
 
 use unin::{u4, u6};
 
 /// A bitmask representing the major version portion of a [`TitleVersion`]
-///
-/// [`TitleVersion`]: ./struct.TitleVersion.html
 pub const MAJOR_VERSION_BITMASK: u16 = 0b1111_1100_0000_0000;
 
 /// A bitmask representing the minor version portion of a [`TitleVersion`]
-///
-/// [`TitleVersion`]: ./struct.TitleVersion.html
 pub const MINOR_VERSION_BITMASK: u16 = 0b0000_0011_1111_0000;
 
 /// A bitmask representing the micro version portion of a [`TitleVersion`]
-///
-/// [`TitleVersion`]: ./struct.TitleVersion.html
 pub const MICRO_VERSION_BITMASK: u16 = 0b0000_0000_0000_1111;
 
 /// An integer that represents the version of a corresponding title
@@ -60,32 +50,24 @@ pub struct TitleVersion(pub u16);
 
 impl TitleVersion {
     /// Create a [`TitleVersion`] from its components
-    ///
-    /// [`TitleVersion`]: ./struct.TitleVersion.html
     #[inline]
     pub fn from_segments(major: u6, minor: u6, micro: u4) -> Self {
         Self((u16::from(major) << 10) | (u16::from(minor) << 4) | u16::from(micro))
     }
 
     /// Extract the major segment from the [`TitleVersion`]
-    ///
-    /// [`TitleVersion`]: ./struct.TitleVersion.html
     #[inline]
     pub fn major(self) -> u6 {
         u6::new((self.0 >> 10) as u8)
     }
 
     /// Extract the minor segment from the [`TitleVersion`]
-    ///
-    /// [`TitleVersion`]: ./struct.TitleVersion.html
     #[inline]
     pub fn minor(self) -> u6 {
         u6::new(((self.0 & MINOR_VERSION_BITMASK) >> 4) as u8)
     }
 
     /// Extract the micro segment from the [`TitleVersion`]
-    ///
-    /// [`TitleVersion`]: ./struct.TitleVersion.html
     #[inline]
     pub fn micro(self) -> u4 {
         u4::new((self.0 & MICRO_VERSION_BITMASK) as u8)

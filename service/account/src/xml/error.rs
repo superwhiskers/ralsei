@@ -36,23 +36,16 @@ use ralsei_util::xml::{
 #[derive(Clone, Default, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Errors<'a> {
     /// A vector of [`Error`] types
-    ///
-    /// [`Error`]: ./struct.Error.html
     pub errors: Vec<Error<'a>>,
 }
 
 impl<'a> Errors<'a> {
     /// Returns the first [`Error`] or `None` if there are none
-    ///
-    /// [`Error`]: ./struct.Error.html
     pub fn first(&self) -> Option<&Error> {
         self.errors.first()
     }
 
     /// Returns the first [`Error`]'s [`ErrorCode`] or `None` if there are none
-    ///
-    /// [`Error`]: ./struct.Error.html
-    /// [`ErrorCode`]: ./struct.ErrorCode.html
     pub fn first_code(&self) -> Option<&ErrorCode> {
         self.errors.first().map(|v| &v.code)
     }
@@ -222,8 +215,6 @@ pub enum ErrorCode {
 
 impl ErrorCode {
     /// Returns an [`ErrorCode`] of the provided u16
-    ///
-    /// [`ErrorCode`]: ./enum.ErrorCode.html
     pub fn from_u16(n: u16) -> Self {
         match ErrorCodeValue::from_u16(n) {
             Some(known_code) => Self::Known(known_code),

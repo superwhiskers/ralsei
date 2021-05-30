@@ -19,7 +19,5 @@ use framework::{BufferPool, BufferPoolManager};
 ///
 /// Has a hardcoded capacity of 1000, as this really should not be used anywhere outside of quick
 /// examples or really hacked together, single-use programs
-///
-/// [`Vec<u8>`]: https://doc.rust-lang.org/nightly/std/vec/struct.Vec.html
 pub static GLOBAL_BUFFER_POOL: SyncLazy<BufferPool> =
     SyncLazy::new(|| BufferPool::new(BufferPoolManager {}, 1000));

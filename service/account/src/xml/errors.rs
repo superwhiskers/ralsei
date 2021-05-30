@@ -15,8 +15,6 @@ use std::num::ParseIntError;
 use ralsei_util::xml::errors::ResultWithError;
 
 /// A convenience alias for [`Result`] types within this module
-///
-/// [`Result`]: https://doc.rust-lang.org/nightly/std/result/enum.Result.html
 pub type Result<T> = ResultWithError<T, Error>;
 
 /// A specialized error type enumerating over errors that may occur specifically while dealing with

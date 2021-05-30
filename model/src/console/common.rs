@@ -15,9 +15,6 @@
 //!
 //! Aside from that, there are a number of other shared type definitions used in forming a
 //! console's data that are defined here, such as the [`Region`] enumeration.
-//!
-//! [`Console`]: ./trait.Console.html
-//! [`Region`]: ./enum.Region.html
 
 use http::header::{HeaderMap, HeaderValue, InvalidHeaderValue};
 use num_derive::{FromPrimitive, ToPrimitive};
@@ -37,9 +34,6 @@ pub trait Console<'a> {
     ///
     /// This is mainly necessary for things like automatic client certificate application, to avoid
     /// using the wrong client certificate for the console that we are attempting to emulate.
-    ///
-    /// [`Kind`]: ./enum.Kind.html
-    /// [`Console`]: ./trait.Console.html
     fn kind(&self) -> Kind;
 
     /// Constructs a [`HeaderMap`] from the console's data used when contacting the specified
@@ -50,11 +44,6 @@ pub trait Console<'a> {
     ///
     /// If your console data is invalid in that it is too large/malformed and cannot be placed as a
     /// header's value, it will return an error of [`HeaderConstructionError::InvalidHeaderValue`].
-    ///
-    /// [`HeaderMap`]: https://docs.rs/http/0.2.1/http/header/struct.HeaderMap.html
-    /// [`ServerKind`]: ../server/enum.ServerKind.html
-    /// [`HeaderConstructionError::UnimplementedServerKind`]: ./enum.HeaderConstructionError.html#variant.UnimplementedServerKind
-    /// [`HeaderConstructionError::InvalidHeaderValue`]: ./enum.HeaderConstructionError.html#variant.InvalidHeaderValue
     fn http_headers(
         &self,
         server: ServerKind<'_>,
@@ -67,8 +56,6 @@ pub trait Console<'a> {
 /// A list of possible errors encountered while constructing headers
 ///
 /// It is used by all implementors of [`Console`].
-///
-/// [`Console`]: ./trait.Console.html
 #[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum HeaderConstructionError {
@@ -77,9 +64,8 @@ pub enum HeaderConstructionError {
     #[error("One of your console's details is an invalid header value")]
     InvalidHeaderValue(#[from] InvalidHeaderValue),
 
-    /// An error returned when a [`Certificate`] could not be converted to or from bytes
-    ///
-    /// [`Certificate`]: ../../certificate/struct.Certificate.html
+    /// An error returned when a [`Certificate`](crate::certificate::Certificate) could not be
+    /// converted to or from bytes
     #[error("A Certificate could not be converted to or from bytes")]
     CertificateError(#[from] CertificateError),
 
@@ -93,8 +79,6 @@ pub enum HeaderConstructionError {
 ///
 /// While it is entirely possible to create a Switch client, this is not listed here as there are
 /// currently no plans to provide an implementation for one.
-///
-/// [`Console`]: ./trait.Console.html
 #[non_exhaustive]
 #[derive(
     IntoStaticStr,
@@ -119,8 +103,6 @@ pub enum Kind {
 ///
 /// While not console-specific, it is not accessible through the [`Console`] trait and must instead
 /// be gotten through the underlying structure.
-///
-/// [`Console`]: ./trait.Console.html
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum Environment {
     L(u8),
@@ -156,9 +138,6 @@ pub enum Type {
 ///
 /// Side note: Of these regions, [`Region::Australia`] is not a game region, and instead takes
 /// games from [`Region::Europe`].
-///
-/// [`Region::Australia`]: #variant.Australia
-/// [`Region::Europe`]: #variant.Europe
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum Region {
     Japan = 0b0000001,
@@ -172,8 +151,6 @@ pub enum Region {
 
 /// An enumeration over all possible consoles that can have the serial format as implemented by
 /// [`ConsoleSerial`]
-///
-/// [`ConsoleSerial`]: ./struct.ConsoleSerial.html
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub enum Model {
     NintendoDsi,
@@ -237,8 +214,6 @@ impl ConsoleSerial<'_> {
     ///
     /// If no error was returned, the check succeeded. Otherwise, the specific error can be figured
     /// out by checking the returned [`InvalidSerialError`]
-    ///
-    /// [`InvalidSerialError`]: ./enum.InvalidSerialError.html
     pub fn verify(&self) -> Result<(), InvalidSerialError> {
         let serial_number = self.number()?.as_bytes();
         (generate_check_digit_generation_code!(serial_number) == u16::from(serial_number[8] - 48))
@@ -298,8 +273,6 @@ impl ConsoleSerial<'_> {
     }
 
     /// Returns the appropriate console [`Model`] for the device portion of the serial
-    ///
-    /// [`Model`]: ./enum.Model.html
     pub fn device_model(&self) -> Result<Model, InvalidSerialError> {
         Ok(
             match self
@@ -326,8 +299,6 @@ impl ConsoleSerial<'_> {
 
     /// Returns the appropriate console [`Type`] for the device portion of the serial (for
     /// n2ds/n3ds consoles it peeks into the number to derive the [`Type`])
-    ///
-    /// [`Type`]: ./enum.Type.html
     pub fn device_type(&self) -> Result<Type, InvalidSerialError> {
         Ok(
             match self
@@ -369,9 +340,6 @@ impl ConsoleSerial<'_> {
 
     /// Returns the appropriate console [`Model`] and console [`Type`] for the device portion of
     /// the serial (for n2ds/n3ds consoles it peeks into the number to derive the [`Type`])
-    ///
-    /// [`Model`]: ./enum.Model.html
-    /// [`Type`]: ./enum.Type.html
     pub fn device(&self) -> Result<(Model, Type), InvalidSerialError> {
         Ok(
             match self
@@ -431,9 +399,7 @@ impl ConsoleSerial<'_> {
     }
 }
 
-/// An enumeration over the possible errors that can occur when using a [`Serial`]
-///
-/// [`Serial`]: ./struct.Serial.html
+/// An enumeration over the possible errors that can occur when using a [`ConsoleSerial`]
 #[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum InvalidSerialError {
