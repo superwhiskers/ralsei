@@ -15,5 +15,6 @@ pub const DEFAULT_ACCOUNT_SERVER_HOST: &str = "account.nintendo.net";
 /// A module containing paths to various endpoints of the Nintendo Network account server
 pub mod account_api_endpoints {
     pub const PEOPLE: &str = "/v1/api/people/";
-    pub const EULAS: &str = "/v1/api/content/agreements/Nintendo-Network-EULA/";
+    pub const AGREEMENTS: &str = "/v1/api/content/agreements/";
+    pub const TIMEZONES: &str = "/v1/api/content/time_zones/";
 }

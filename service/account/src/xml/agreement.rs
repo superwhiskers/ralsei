@@ -38,8 +38,6 @@ use ralsei_util::xml::{
     },
 };
 
-//TODO(superwhiskers): hook this into the custom serialization/deserialization infrastructure
-
 //TODO(superwhiskers): replace usage of the isocountry crate with my iso crate
 
 /// A representation of a Nintendo Network EULA document
@@ -49,23 +47,6 @@ pub struct Agreements<'a> {
     ///
     /// [`Agreement`]: ./struct.Agreement.html
     pub agreements: Vec<Agreement<'a>>,
-}
-
-impl<'a> Agreements<'a> {
-    /// Returns the first [`Agreement`] or `None` if there are none
-    ///
-    /// [`Agreement`]: ./struct.Agreement.html
-    pub fn first(&self) -> Option<&Agreement> {
-        self.agreements.first()
-    }
-
-    /// Returns the first [`Agreement`]'s [`AgreementKind`] or `None` if there are none
-    ///
-    /// [`Agreement`]: ./struct.Agreement.html
-    /// [`AgreementKind`]: ./enum.AgreementKind.html
-    pub fn first_kind(&self) -> Option<&AgreementKind> {
-        self.agreements.first().map(|v| &v.kind)
-    }
 }
 
 #[async_trait]
@@ -108,6 +89,9 @@ impl<'a> FromXml<XmlErrorExtension> for Agreements<'a> {
 }
 
 /// A Nintendo Network account server agreement
+///
+/// Contained inside is the country it is intended for, the language it is written in, labels for
+/// the buttons associated with it, the kind of agreement, and its version
 #[derive(Clone, Default, Debug, Eq, Hash, PartialEq)]
 pub struct Agreement<'a> {
     /// The country code representing the country the agreement is intended for in the iso 3166-1
@@ -138,10 +122,6 @@ pub struct Agreement<'a> {
 
     /// The agreement's version
     pub version: Option<u16>,
-}
-
-impl<'a> Agreement<'a> {
-    //TODO(superwhiskers): placeholder section b/c this may be necessary later
 }
 
 #[async_trait]

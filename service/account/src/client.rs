@@ -28,7 +28,11 @@ use tokio_native_tls::TlsConnector;
 
 use crate::{
     common::{account_api_endpoints, DEFAULT_ACCOUNT_SERVER_HOST},
-    xml::{agreement::Agreements, error as error_xml, errors::Error as XmlErrorExtension},
+    xml::{
+        agreement::{AgreementKindValue, Agreements},
+        error as error_xml,
+        errors::Error as XmlErrorExtension,
+    },
 };
 use ralsei_keypairs::{CTR_COMMON_1, NINTENDO_CACERTS, WUP_ACCOUNT_1};
 use ralsei_model::{
@@ -166,6 +170,7 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
     /// Execute a request using the provided [`Request`]
     ///
     /// [`Request`]: https://docs.rs/http/0.2.1/http/request/struct.Request.html
+    #[inline]
     pub fn request(&self, mut request: Request<Body>) -> ResponseFuture {
         request
             .headers_mut()
@@ -224,21 +229,36 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
         }
     }
 
-    /// Retrieve [`Agreements`] from the provided account server based on their intended country and
-    /// version
+    //TODO(superwhiskers): add timezones method
+
+    /// Retrieve [`Agreements`] from the provided account server based on their kind, intended
+    /// country, and version
     ///
     /// [`Agreements`]: ./xml/agreement/struct.Agreements.html
-    pub async fn agreement_xml(
+    pub async fn agreements(
         &self,
+        kind: AgreementKindValue,
         country: CountryCode,
         version: AgreementVersionParameter,
     ) -> Result<Agreements<'_>, ClientError> {
-        //TODO(superwhiskers): find a more efficient way to do this, as this is likely not as
-        //                     efficient as it could be
-        let mut path = version.to_string();
-        path.insert(0, '/');
-        path.insert_str(0, country.alpha2());
-        path.insert_str(0, account_api_endpoints::EULAS);
+        let kind = kind.to_string();
+        let version = version.to_string();
+
+        // the length is determined by the length of
+        // - the agreements path string - 54
+        // - the kind - dynamic
+        // - the slash - 1
+        // - the country - 2
+        // - the slash - 1
+        // - the version - dynamic
+        let mut path = String::with_capacity(58 + kind.len() + version.len());
+
+        path.push_str(account_api_endpoints::AGREEMENTS);
+        path.push_str(&kind);
+        path.push('/');
+        path.push_str(country.alpha2());
+        path.push('/');
+        path.push_str(&version);
         let response = self
             .request(
                 Request::builder()

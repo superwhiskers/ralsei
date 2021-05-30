@@ -39,4 +39,8 @@ pub enum Error {
     /// An error that may arise while parsing an integer
     #[error("An error was encountered while parsing an integer")]
     IntegerParseError(#[from] ParseIntError),
+
+    /// An error that indicates that the provided UTC offset is out of bounds
+    #[error("The provided UTC offset, `{0}`, is out of bounds")]
+    UtcOffsetOutOfBounds(i32),
 }

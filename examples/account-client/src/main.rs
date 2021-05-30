@@ -22,7 +22,10 @@ use ralsei_model::{
     network::Nnid,
     title::{id::TitleId, version::TitleVersion},
 };
-use ralsei_service_account::client::{AgreementVersionParameter, Client};
+use ralsei_service_account::{
+    client::{AgreementVersionParameter, Client},
+    xml::agreement::AgreementKindValue,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -135,7 +138,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("eula", Some(arguments)) => println!(
             "agreement: {:?}",
             client
-                .agreement_xml(
+                .agreements(
+                    AgreementKindValue::Eula,
                     CountryCode::for_alpha2_caseless(
                         arguments
                             .value_of("COUNTRY")

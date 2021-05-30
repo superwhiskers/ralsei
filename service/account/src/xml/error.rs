@@ -172,8 +172,7 @@ impl<'a> FromXml<XmlErrorExtension> for Error<'a> {
             reader, buffer_pool,
             c,
             b"cause" => {
-                self.cause =
-                    Some(Cow::Owned(reader.read_text(c.name(), &mut *buffer_pool.get().await?)?))
+                self.cause = Some(Cow::Owned(reader.read_text(c.name(), &mut *buffer_pool.get().await?)?));
             },
             b"code" => {
                 generate_xml_field_read_by_propagation!(
@@ -184,8 +183,7 @@ impl<'a> FromXml<XmlErrorExtension> for Error<'a> {
                 );
             },
             b"message" => {
-                self.message =
-                    Some(Cow::Owned(reader.read_text(c.name(), &mut *buffer_pool.get().await?)?))
+                self.message = Some(Cow::Owned(reader.read_text(c.name(), &mut *buffer_pool.get().await?)?));
             }
         )
     }
@@ -623,7 +621,7 @@ pub enum ErrorCodeValue {
     #[error("No country was provided in the request")]
     UnprovidedCountry = 1200,
 
-    #[error("Unable to process request")]
+    #[error("Unable to process request")] // likely pretendo-specific
     BadRequestError = 1600,
 
     #[error("An internal server error occurred")]
