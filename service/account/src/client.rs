@@ -7,10 +7,15 @@
 // file, you can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
+use chrono::{
+    offset::{TimeZone, Utc},
+    DateTime,
+};
 use futures::stream::TryStreamExt;
 use http::{
+    header::{HeaderMap, HeaderValue, ToStrError as HeaderValueToStrError},
     uri::{Authority, InvalidUri, PathAndQuery},
-    Error as HttpError, HeaderMap, HeaderValue, Request, Uri, Version as HttpVersion,
+    Error as HttpError, Request, Uri, Version as HttpVersion,
 };
 use hyper::{
     client::{Client as HttpClient, HttpConnector, ResponseFuture},
@@ -24,7 +29,14 @@ use native_tls::{
 };
 use parking_lot::RwLock;
 use quick_xml::Reader as XmlReader;
-use std::{borrow::Cow, convert::TryFrom, mem::MaybeUninit, str, sync::Arc};
+use std::{
+    borrow::Cow,
+    convert::TryFrom,
+    mem::MaybeUninit,
+    num::ParseIntError,
+    str::{self, FromStr},
+    sync::Arc,
+};
 use tokio_native_tls::TlsConnector;
 
 use crate::{
@@ -47,6 +59,26 @@ use ralsei_util::xml::{
     framework::{BufferPool, FromXml},
     GLOBAL_BUFFER_POOL,
 };
+
+macro handle_error_xml($self:ident, $response:ident) {{
+    let mut error = error_xml::Errors::default();
+    error
+        .from_xml(
+            &mut XmlReader::from_reader(
+                $response
+                    .into_body()
+                    .try_fold(Vec::new(), |mut accumulator, chunk| async move {
+                        accumulator.extend_from_slice(&chunk);
+                        Ok(accumulator)
+                    })
+                    .await?
+                    .as_slice(),
+            ),
+            $self.pool.clone(),
+        )
+        .await?;
+    Err(error.into())
+}}
 
 /// A client for the Nintendo Network account servers
 ///
@@ -285,25 +317,7 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
                     .await?;
                 Ok(agreements)
             }
-            400 | 401 => {
-                let mut error = error_xml::Errors::default();
-                error
-                    .from_xml(
-                        &mut XmlReader::from_reader(
-                            response
-                                .into_body()
-                                .try_fold(Vec::new(), |mut accumulator, chunk| async move {
-                                    accumulator.extend_from_slice(&chunk);
-                                    Ok(accumulator)
-                                })
-                                .await?
-                                .as_slice(),
-                        ),
-                        self.pool.clone(),
-                    )
-                    .await?;
-                Err(error.into())
-            }
+            400 | 401 => handle_error_xml!(self, response),
             status => Err(ClientError::UnexpectedStatusCode(status)),
         }
     }
@@ -366,25 +380,42 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
                     .await?;
                 Ok(timezones)
             }
-            400 | 401 => {
-                let mut error = error_xml::Errors::default();
-                error
-                    .from_xml(
-                        &mut XmlReader::from_reader(
-                            response
-                                .into_body()
-                                .try_fold(Vec::new(), |mut accumulator, chunk| async move {
-                                    accumulator.extend_from_slice(&chunk);
-                                    Ok(accumulator)
-                                })
-                                .await?
-                                .as_slice(),
-                        ),
-                        self.pool.clone(),
+            400 | 401 => handle_error_xml!(self, response),
+            status => Err(ClientError::UnexpectedStatusCode(status)),
+        }
+    }
+
+    /// Retrieve the current time according to the account server, in UTC
+    pub async fn time(&self) -> Result<DateTime<Utc>, ClientError> {
+        let response = self
+            .request(
+                Request::builder()
+                    .method("GET")
+                    .uri(
+                        Uri::builder()
+                            .scheme("https")
+                            .authority(Authority::try_from(self.host.read().as_ref())?)
+                            .path_and_query(PathAndQuery::try_from(account_api_endpoints::TIME)?)
+                            .build()?,
                     )
-                    .await?;
-                Err(error.into())
+                    .version(HttpVersion::HTTP_11)
+                    .body(Body::empty())?,
+            )
+            .await?;
+        match response.status().as_u16() {
+            200 => {
+                let integer_timestamp = i64::from_str(
+                    response
+                        .headers()
+                        .get("X-Nintendo-Date")
+                        .ok_or(ClientError::MissingHeader("X-Nintendo-Date"))?
+                        .to_str()?,
+                )?;
+                Ok(Utc.timestamp_millis_opt(integer_timestamp)
+                    .single()
+                    .ok_or(ClientError::TimestampParseError(integer_timestamp))?)
             }
+            401 => handle_error_xml!(self, response),
             status => Err(ClientError::UnexpectedStatusCode(status)),
         }
     }
@@ -446,4 +477,21 @@ pub enum ClientError {
     /// The Nintendo Network API returned an unexpected status code
     #[error("The Nintendo Network API returned an unexpected status code, `{0}`")]
     UnexpectedStatusCode(u16),
+
+    /// The Nintendo Network API returned a response that lacks an expected header
+    #[error("The Nintendo Network API returned a response that lacked an expected header, `{0}`")]
+    MissingHeader(&'static str),
+
+    /// An error encountered when a header value is unable to be interpreted as a &str
+    #[error("An error was encountered while trying to interpret a header value as a &str")]
+    HeaderValueToStrError(#[from] HeaderValueToStrError),
+
+    /// An error encountered when a string cannot be parsed as an integer
+    #[error("An error was encountered while trying to parse a string as an integer")]
+    IntegerParseError(#[from] ParseIntError),
+
+    /// An error encountered when an integer timestamp does not have a single representation
+    /// according to the chrono library
+    #[error("The Nintendo Network API returned a timestamp that cannot be parsed to a single representation, `{0}`")]
+    TimestampParseError(i64),
 }

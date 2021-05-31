@@ -17,4 +17,5 @@ pub mod account_api_endpoints {
     pub const PEOPLE: &str = "/v1/api/people/";
     pub const AGREEMENTS: &str = "/v1/api/content/agreements/";
     pub const TIMEZONES: &str = "/v1/api/content/time_zones/";
+    pub const TIME: &str = "/v1/api/admin/time";
 }

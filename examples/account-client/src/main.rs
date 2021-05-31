@@ -59,6 +59,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             (@arg COUNTRY: +required "the country to get timezones from")
             (@arg LANGUAGE: +required "the language to have the names in")
         )
+        (@subcommand utc =>
+            (about: "get the time, in utc, according to the account server")
+        )
     ).get_matches();
 
     let console = Arc::new(RwLock::new(Console3ds::new(|b| {
@@ -171,6 +174,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 )
                 .await?
         ),
+        ("utc", _) => println!("time in utc: {}", client.time().await?),
         _ => println!("you shouldn't have done that"),
     }
     Ok(())
