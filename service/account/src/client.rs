@@ -109,7 +109,11 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
             } else {
                 GLOBAL_BUFFER_POOL.clone()
             },
-            cached_headers: RwLock::new(console.read().http_headers(ServerKind::Account(Cow::Borrowed(&host)))?),
+            cached_headers: RwLock::new(
+                console
+                    .read()
+                    .http_headers(ServerKind::Account(Cow::Borrowed(&host)))?,
+            ),
             http: HttpClient::builder().build(HttpsConnector::from((
                 {
                     let mut http = HttpConnector::new();

@@ -18,8 +18,8 @@
 //! the 3ds' module
 
 use hyper::header::{self, HeaderMap, HeaderValue};
+use iso::language::{Iso639_1, Language};
 use isocountry::CountryCode;
-use iso::language::{Language, Iso639_1};
 use std::borrow::Cow;
 use thiserror::Error;
 
