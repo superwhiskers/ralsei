@@ -411,7 +411,8 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
                         .ok_or(ClientError::MissingHeader("X-Nintendo-Date"))?
                         .to_str()?,
                 )?;
-                Ok(Utc.timestamp_millis_opt(integer_timestamp)
+                Ok(Utc
+                    .timestamp_millis_opt(integer_timestamp)
                     .single()
                     .ok_or(ClientError::TimestampParseError(integer_timestamp))?)
             }
