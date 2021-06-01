@@ -612,7 +612,7 @@ pub enum ErrorCodeValue {
     #[error("No country was provided in the request")]
     UnprovidedCountry = 1200,
 
-    #[error("Unable to process request")] // likely pretendo-specific
+    #[error("Unable to process request")]
     BadRequestError = 1600,
 
     #[error("An internal server error occurred")]

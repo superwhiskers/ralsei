@@ -323,7 +323,7 @@ impl<'a> AgreementKind<'a> {
     }
 
     /// Returns the [`AgreementKind`] represented as a [`&str`]
-    pub fn to_str(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         match &self {
             Self::Known(value) => value.as_ref(),
             Self::Unknown(value) => &value,
@@ -333,7 +333,7 @@ impl<'a> AgreementKind<'a> {
 
 impl<'a> fmt::Display for AgreementKind<'a> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(self.to_str())
+        formatter.write_str(self.as_str())
     }
 }
 
