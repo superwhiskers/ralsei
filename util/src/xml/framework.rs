@@ -21,18 +21,21 @@ use std::{
 use crate::xml::errors::ResultWithError;
 
 /// A type alias for a [`Pool`] of [`Vec<u8>`]s
-pub type BufferPool = Pool<Vec<u8>, !>;
+pub type BufferPool = Pool<BufferPoolManager>;
 
 /// The [`Manager`] implementation used by [`Pool`]s that are passed to implementors of [`FromXml`]
 pub struct BufferPoolManager;
 
 #[async_trait]
-impl Manager<Vec<u8>, !> for BufferPoolManager {
-    async fn create(&self) -> StdResult<Vec<u8>, !> {
+impl Manager for BufferPoolManager {
+    type Type = Vec<u8>;
+    type Error = !;
+
+    async fn create(&self) -> StdResult<Self::Type, Self::Error> {
         Ok(Vec::new())
     }
 
-    async fn recycle(&self, buffer: &mut Vec<u8>) -> RecycleResult<!> {
+    async fn recycle(&self, buffer: &mut Self::Type) -> RecycleResult<Self::Error> {
         buffer.clear();
         Ok(())
     }
