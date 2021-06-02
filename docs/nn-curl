@@ -1,20 +1,17 @@
 #!/usr/bin/env sh
 
-DEFAULT_HEADERS="User-Agent:
+. $(echo "${NNCURL_HEADER_FILE}" | sed "s.~.${HOME}.") 2>/dev/null || HEADERS="User-Agent:
 X-Nintendo-Client-ID: ea25c66c26b403376b4c5ed94ab9cdea
 X-Nintend-FPD-Version: 0000
 X-Nintendo-Client-Secret: d137be62cb6a2b831cad8c013b92fb55
 X-Nintendo-Platform-ID: 1
-X-Nintendo-Device-Type; 2
+X-Nintendo-Device-Type: 2
 X-Nintendo-Device-ID: 1
 X-Nintendo-Serial-Number: CW404567772
-X-Nintendo-System-Version: 736
+X-Nintendo-System-Version: 0736
 X-Nintendo-Region: 2
 X-Nintendo-Country: US
 X-Nintendo-Environment: L1"
-
-# provide this yourself if you want
-# X-Nintendo-Device-Cert;
 
 CLIENT_CERTIFICATE="Bag Attributes
     localKeyID: 16 7D DD F2 84 6D 96 0E 82 A1 34 8E 34 EB 07 2B 94 4D 63 73 
@@ -85,5 +82,5 @@ o1gsGI+nR96Cb1kvfXzsj+V5UkZchew2pOqhrqpPknGIlFCeTDYjN8jqJyX4EljJ
 
 clean(){ rm -f /tmp/nncurl_*; } && trap clean EXIT
 (echo "${CLIENT_CERTIFICATE}" > /tmp/nncurl_clientcert || exit) && (echo "${CLIENT_CERTIFICATE_KEY}" > /tmp/nncurl_clientcertkey || exit)
-OUTPUT=$(curl --tlsv1.1 --silent -D /tmp/nncurl_respheaders -H "${DEFAULT_HEADERS}" --cert /tmp/nncurl_clientcert --key /tmp/nncurl_clientcertkey -k $*) || exit
+OUTPUT=$(curl --tlsv1.1 --silent -D /tmp/nncurl_respheaders -H "${HEADERS}" --cert /tmp/nncurl_clientcert --key /tmp/nncurl_clientcertkey -k $*) || exit
 (which xmllint 2>/dev/null >/dev/null && echo "$(cat /tmp/nncurl_respheaders 2>/dev/null)" && (echo "${OUTPUT}" | xmllint --format - 2>/dev/null || echo "error: unable to parse xml")) || (echo "$(cat /tmp/nncurl_respheaders 2>/dev/null)" && echo "${OUTPUT}")
