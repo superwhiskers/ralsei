@@ -1,5 +1,6 @@
 #!/usr/bin/env sh
 
+# expects a file which defines the HEADERS variable with the headers you wish to set
 . $(echo "${NNCURL_HEADER_FILE}" | sed "s.~.${HOME}.") 2>/dev/null || HEADERS="User-Agent:
 X-Nintendo-Client-ID: ea25c66c26b403376b4c5ed94ab9cdea
 X-Nintend-FPD-Version: 0000
