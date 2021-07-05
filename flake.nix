@@ -11,7 +11,17 @@
       let pkgs = nixpkgs.legacyPackages."${system}";
       in {
         devShell = pkgs.mkShell {
-          nativeBuildInputs = with pkgs; [ openssl pkg-config rustup libxml2 ];
+          nativeBuildInputs = with pkgs; [
+            # needed for ralsei itself
+            openssl
+            pkg-config
+            rustup
+            libxml2
+
+            # needed to compile documentation
+            (texlive.combined.scheme-small)
+            pandoc
+          ];
         };
       });
 }
