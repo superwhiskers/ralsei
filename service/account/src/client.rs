@@ -420,6 +420,10 @@ impl<'a, C: Console<'a> + Send + Clone> Client<'a, C> {
             status => Err(ClientError::UnexpectedStatusCode(status)),
         }
     }
+
+    /// Map one valid id on the network to another
+    pub async fn convert_id(&self) -> Result<(), ClientError> {
+    }
 }
 
 /// An enumeration over the ways a version can be represented to the agreement xml retrieval
@@ -475,6 +479,10 @@ pub enum ClientError {
     #[error("An error was encountered while deserializing XML")]
     XmlError(#[from] XmlError<XmlErrorExtension>),
 
+    /// An error was encountered while deserializing XML
+    #[error("An error was encountered while deserializing XML")]
+    XmlError(#[from] XmlError<XmlErrorExtension>),
+
     /// The Nintendo Network API returned an unexpected status code
     #[error("The Nintendo Network API returned an unexpected status code, `{0}`")]
     UnexpectedStatusCode(u16),
@@ -491,8 +499,5 @@ pub enum ClientError {
     #[error("An error was encountered while trying to parse a string as an integer")]
     IntegerParseError(#[from] ParseIntError),
 
-    /// An error encountered when an integer timestamp does not have a single representation
-    /// according to the chrono library
-    #[error("The Nintendo Network API returned a timestamp that cannot be parsed to a single representation, `{0}`")]
-    TimestampParseError(i64),
+    // /// An error encountered when an integer timestamp does not have a single representation
 }
